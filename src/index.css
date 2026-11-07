@@ -1,0 +1,90 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-cinzel: 'Cinzel', serif;
+    --font-cormorant: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    color-scheme: dark light;
+  }
+
+  body {
+    @apply bg-[#080B11] text-[#E8EDF5] antialiased selection:bg-[#C5A880]/30 selection:text-[#E8EDF5];
+  }
+}
+
+.font-cinzel {
+  font-family: var(--font-cinzel);
+}
+
+.font-cormorant {
+  font-family: var(--font-cormorant);
+}
+
+/* Custom subtle gold sheen and glass effects */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #F3E2C8 0%, #D4AF37 50%, #B89047 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-border {
+  border-color: rgba(197, 168, 128, 0.22);
+}
+
+.gold-subtle-glow {
+  box-shadow: 0 0 40px -10px rgba(197, 168, 128, 0.12);
+}
+
+/* Hairline scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #080B11;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(197, 168, 128, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 168, 128, 0.45);
+}
+
+/* Printer-ready styles for offline legal briefs & insights */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #printable-document, #printable-document * {
+    visibility: visible;
+  }
+  
+  #printable-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 1.4cm 1.2cm;
+  }
+}
