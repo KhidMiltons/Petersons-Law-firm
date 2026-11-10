@@ -11,7 +11,7 @@ export const NairobiChambers: React.FC<NairobiChambersProps> = ({ onOpenConsulta
   const { t } = useLanguage();
 
   return (
-    <section className="py-24 bg-[#0A0E17] border-b border-[#1E2536] relative overflow-hidden">
+    <section id="chambers" className="py-24 bg-[#0A0E17] border-b border-[#1E2536] relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         
         {/* Split grid: Chambers information + Nairobi Skyline Card */}

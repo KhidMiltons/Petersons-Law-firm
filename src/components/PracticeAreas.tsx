@@ -7,12 +7,14 @@ interface PracticeAreasProps {
   onOpenConsultation: (practiceTitle: string) => void;
   focusedPracticeId?: string | null;
   onClearFocusedPractice?: () => void;
+  onSelectPractice?: (practice: PracticeArea | null) => void;
 }
 
 export const PracticeAreas: React.FC<PracticeAreasProps> = ({
   onOpenConsultation,
   focusedPracticeId,
   onClearFocusedPractice,
+  onSelectPractice
 }) => {
   const { t } = useLanguage();
   const [selectedPractice, setSelectedPractice] = useState<PracticeArea | null>(null);
@@ -22,9 +24,10 @@ export const PracticeAreas: React.FC<PracticeAreasProps> = ({
       const found = PRACTICE_AREAS.find((p) => p.id === focusedPracticeId);
       if (found) {
         setSelectedPractice(found);
+        if (onSelectPractice) onSelectPractice(found);
       }
     }
-  }, [focusedPracticeId]);
+  }, [focusedPracticeId, onSelectPractice]);
 
   const getIcon = (iconName: string) => {
     switch (iconName) {
@@ -62,7 +65,10 @@ export const PracticeAreas: React.FC<PracticeAreasProps> = ({
             return (
               <div
                 key={practice.id}
-                onClick={() => setSelectedPractice(practice)}
+                onClick={() => {
+                  setSelectedPractice(practice);
+                  if (onSelectPractice) onSelectPractice(practice);
+                }}
                 className={`group p-8 rounded-2xl bg-[#0E1522] border border-[#1C263A] hover:border-[#C5A880]/50 hover:shadow-2xl hover:shadow-[#C5A880]/5 transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer transform hover:scale-[1.02] hover:-translate-y-1.5 will-change-transform ${
                   isFeatured ? 'lg:col-span-1 border-t-2 border-t-[#C5A880]/60' : ''
                 }`}
@@ -123,7 +129,11 @@ export const PracticeAreas: React.FC<PracticeAreasProps> = ({
                   <h3 className="text-2xl font-cinzel text-white mt-1">{selectedPractice.title}</h3>
                 </div>
                 <button
-                  onClick={() => setSelectedPractice(null)}
+                  onClick={() => {
+                    setSelectedPractice(null);
+                    if (onSelectPractice) onSelectPractice(null);
+                    if (onClearFocusedPractice) onClearFocusedPractice();
+                  }}
                   className="p-2 text-[#8C98AE] hover:text-white rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -181,7 +191,11 @@ export const PracticeAreas: React.FC<PracticeAreasProps> = ({
 
               <div className="p-6 bg-[#121927] border-t border-[#222E46] flex items-center justify-between">
                 <button
-                  onClick={() => setSelectedPractice(null)}
+                  onClick={() => {
+                    setSelectedPractice(null);
+                    if (onSelectPractice) onSelectPractice(null);
+                    if (onClearFocusedPractice) onClearFocusedPractice();
+                  }}
                   className="px-4 py-2 text-xs text-[#8C98AE] hover:text-white"
                 >
                   {t('practice.close')}

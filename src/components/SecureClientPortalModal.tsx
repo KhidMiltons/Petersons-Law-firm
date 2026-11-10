@@ -10,6 +10,8 @@ import {
 import { MOCK_CLIENT_MATTERS, ClientMatter, MatterDocument, MatterChronologyStep } from '../data/firmData';
 import { useLanguage } from '../context/LanguageContext';
 import { DocumentPreviewModal } from './DocumentPreviewModal';
+import { BiometricVerificationModal } from './BiometricVerificationModal';
+import { SecureDocumentAnnotationModal } from './SecureDocumentAnnotationModal';
 
 interface SecureClientPortalModalProps {
   isOpen: boolean;
@@ -127,6 +129,7 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
 
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isBiometricModalOpen, setIsBiometricModalOpen] = useState<boolean>(false);
   const [email, setEmail] = useState<string>(DEMO_ACCOUNTS[0].email);
   const [password, setPassword] = useState<string>(DEMO_ACCOUNTS[0].password);
   const [code2FA, setCode2FA] = useState<string>(DEMO_ACCOUNTS[0].code2FA);
@@ -134,6 +137,10 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [verificationStep, setVerificationStep] = useState<string>('');
+
+  const activeDemoAccount = useMemo(() => {
+    return DEMO_ACCOUNTS.find(a => a.id === selectedDemoId) || DEMO_ACCOUNTS[0];
+  }, [selectedDemoId]);
 
   // Portal Navigation Tabs: 'documents' | 'timeline' | 'notifications'
   const [activeTab, setActiveTab] = useState<'documents' | 'timeline' | 'notifications'>('documents');
@@ -145,6 +152,7 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [previewDoc, setPreviewDoc] = useState<MatterDocument | null>(null);
+  const [annotatingDoc, setAnnotatingDoc] = useState<MatterDocument | null>(null);
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
 
   // Notification State
@@ -202,18 +210,18 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
     }, 500);
   };
 
-  // Mock Biometric Authenticator
+  // High-Security Biometric Authenticator Simulation (WebAuthn API / Passkey)
   const handleBiometricAuth = () => {
-    setIsVerifying(true);
-    setVerificationStep('Accessing device Touch ID / Face ID hardware enclave...');
-    setTimeout(() => {
-      setVerificationStep('Biometric signature verified under KICA § 83B.');
-      setTimeout(() => {
-        setIsVerifying(false);
-        setIsAuthenticated(true);
-        setVerificationStep('');
-      }, 500);
-    }, 700);
+    setAuthError(null);
+    setIsBiometricModalOpen(true);
+  };
+
+  const handleBiometricSuccess = () => {
+    setIsBiometricModalOpen(false);
+    setIsAuthenticated(true);
+    const matched = DEMO_ACCOUNTS.find(a => a.id === selectedDemoId) || DEMO_ACCOUNTS[0];
+    const m = MOCK_CLIENT_MATTERS.find(mat => mat.reference === matched.docket) || MOCK_CLIENT_MATTERS[0];
+    setActiveMatter(m);
   };
 
   // Logout / Lock
@@ -390,6 +398,41 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
                 </span>
               </div>
 
+              {/* Dedicated High-Security Biometric Passkey Gate (Web Authentication API) */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-[#152033] via-[#10192A] to-[#152033] border border-[#C5A880]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-[#C5A880]/5">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-xl bg-[#C5A880]/15 border border-[#C5A880]/40 flex items-center justify-center text-[#DFBE82] shrink-0">
+                    <Fingerprint className="w-6 h-6 text-[#C5A880] animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[#C5A880]">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        <span>Web Authentication API</span>
+                      </span>
+                      <span>·</span>
+                      <span className="text-emerald-400">KICA § 83B Passkey</span>
+                    </div>
+                    <span className="font-semibold text-white block text-sm">
+                      Corporate Biometric Verification Enclave
+                    </span>
+                    <span className="text-[#9BA9BE] text-xs block">
+                      High-security hardware authentication via Touch ID, Face ID, Windows Hello, or FIDO2 Security Token.
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleBiometricAuth}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C5A880] to-[#E4C999] hover:brightness-110 text-[#0A0E17] font-bold text-xs uppercase tracking-wider transition-all shadow-md shrink-0 group"
+                  title="Authenticate instantly using hardware biometric enclave"
+                >
+                  <Fingerprint className="w-4 h-4 text-[#0A0E17] group-hover:scale-110 transition-transform" />
+                  <span>Verify with Biometrics</span>
+                </button>
+              </div>
+
               {/* Quick-Fill Demo Accounts */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
@@ -506,10 +549,10 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
                     type="button"
                     onClick={handleBiometricAuth}
                     disabled={isVerifying}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#141C2B] hover:bg-[#1D273A] border border-[#233148] text-xs font-semibold text-[#CBD5E1] transition-all disabled:opacity-50"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#141C2B] hover:bg-[#1D273A] border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold text-[#DFBE82] transition-all disabled:opacity-50 group shadow-sm"
                   >
-                    <Fingerprint className="w-4 h-4 text-[#C5A880]" />
-                    <span>Biometric Login (Touch ID)</span>
+                    <Fingerprint className="w-4 h-4 text-[#C5A880] group-hover:scale-110 transition-transform" />
+                    <span>Biometric Verification (WebAuthn)</span>
                   </button>
 
                   <button
@@ -784,7 +827,16 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
                               title="Preview Multi-Page Pleading"
                             >
                               <Eye className="w-3.5 h-3.5 text-[#C5A880]" />
-                              <span>Preview Pleading</span>
+                              <span>Preview</span>
+                            </button>
+
+                            <button
+                              onClick={() => setAnnotatingDoc(doc)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#172338] hover:bg-[#223552] text-[#DFBE82] text-xs font-medium rounded-lg border border-[#C5A880]/30 hover:border-[#C5A880] transition-colors"
+                              title="Annotate Clauses & Add Sticky Notes"
+                            >
+                              <Highlighter className="w-3.5 h-3.5 text-[#C5A880]" />
+                              <span>Annotate</span>
                             </button>
 
                             <button
@@ -1140,8 +1192,33 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
           document={previewDoc}
           matter={activeMatter}
           onDownload={(doc) => handleDownloadDoc(doc)}
+          onAnnotate={(doc) => {
+            setPreviewDoc(null);
+            setAnnotatingDoc(doc);
+          }}
         />
       )}
+
+      {/* Interactive Document Annotation Layer Modal (Clauses, Highlights & Sticky Notes) */}
+      {annotatingDoc && (
+        <SecureDocumentAnnotationModal
+          isOpen={!!annotatingDoc}
+          onClose={() => setAnnotatingDoc(null)}
+          document={annotatingDoc}
+          matter={activeMatter}
+        />
+      )}
+
+      {/* High-Security Biometric Verification Simulation Modal (Web Authentication API) */}
+      <BiometricVerificationModal
+        isOpen={isBiometricModalOpen}
+        onClose={() => setIsBiometricModalOpen(false)}
+        onSuccess={handleBiometricSuccess}
+        clientEntity={activeDemoAccount.entity}
+        officerName={activeDemoAccount.officer}
+        officerRole={activeDemoAccount.role}
+        docketRef={activeDemoAccount.docket}
+      />
     </>
   );
 };

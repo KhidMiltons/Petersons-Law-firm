@@ -58,17 +58,19 @@
   background: rgba(197, 168, 128, 0.45);
 }
 
-/* Printer-ready styles for offline legal briefs & insights */
+/* Printer-ready styles for offline legal briefs, insights & monthly legal briefings */
 @media print {
   body * {
     visibility: hidden;
   }
   
-  #printable-document, #printable-document * {
+  #printable-document, #printable-document *,
+  #printable-briefing, #printable-briefing * {
     visibility: visible;
   }
   
-  #printable-document {
+  #printable-document,
+  #printable-briefing {
     position: absolute;
     left: 0;
     top: 0;
@@ -85,6 +87,6 @@
 
   @page {
     size: A4 portrait;
-    margin: 1.4cm 1.2cm;
+    margin: 1.2cm 1.2cm;
   }
 }

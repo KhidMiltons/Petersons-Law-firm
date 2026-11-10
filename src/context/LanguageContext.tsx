@@ -16,6 +16,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.cases': 'Precedents',
     'nav.feeCalculator': 'Fee Calculator',
     'nav.insights': 'Legal Insights',
+    'nav.awards': 'Honors & Awards',
     'nav.clientVault': 'Client Vault',
     'nav.clientPortal': 'Secure Client Portal',
     'nav.secureFiles': 'Secure File Sharing',
@@ -189,6 +190,32 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.upperHill': 'Upper Hill Chambers',
     'footer.rights': 'All rights reserved.',
     'footer.privilege': 'Section 134 Evidence Act (Privilege)',
+
+    // Legal Briefings Newsletter
+    'briefings.kicker': 'Monthly Corporate Law Digest · Advocates Research Desk',
+    'briefings.title': 'Legal Briefings',
+    'briefings.subtitle': 'Curated statutory intelligence, superior court ratios, ArdhiSasa conveyancing directives, and regional regulatory advisories. Dispatched monthly to General Counsels, corporate boards, and institutional legal departments.',
+    'briefings.placeholder': 'Enter corporate or institutional email (e.g. counsel@enterprise.com)',
+    'briefings.subscribe': 'Subscribe to Briefings',
+    'briefings.subscribing': 'Enrolling in Chambers Roll...',
+    'briefings.successTitle': 'Subscribed to Monthly Legal Briefings',
+    'briefings.successDesc': 'Your corporate email has been registered for the monthly chambers legal digest. Next edition dispatches the first Tuesday of the month.',
+    'briefings.printCurrent': 'Print Current Briefing (Nov 2026)',
+    'briefings.printConfirm': 'Print Subscription Record',
+    'briefings.downloadOffline': 'Download Offline Copy (.txt)',
+    'briefings.subAnother': 'Subscribe another corporate address',
+    'briefings.frequency': 'Monthly frequency · First Tuesday dispatch · Evidence Act § 134 privilege enforced',
+
+    // Law Firm Awards
+    'awards.kicker': 'Accreditations & Peer Recognition · The Kenyan & Regional Bar',
+    'awards.title': 'Law Firm Awards & Honors',
+    'awards.subtitle': 'Consistently ranked by global independent legal directories and statutory bodies among the apex commercial litigation, arbitration, and corporate finance practices in Eastern Africa.',
+    'awards.filterAll': 'All Honors (6)',
+    'awards.filterGlobal': 'Chambers & Legal 500',
+    'awards.filterNational': 'LSK & Regional',
+    'awards.filterFinance': 'Banking & Arbitration',
+    'awards.verifiedRef': 'Official Accreditation:',
+    'awards.printCompendium': 'Print Awards Compendium',
 
     // Client Vault Modal
     'vault.badge': 'Kenya Judiciary CTS / NCIA Bridge · 256-Bit SSL Encrypted',
@@ -367,6 +394,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.cases': 'Maamuzi ya Mahakama',
     'nav.feeCalculator': 'Kikokotoo cha Ada',
     'nav.insights': 'Uchambuzi wa Sheria',
+    'nav.awards': 'Tuzo na Heshima',
     'nav.clientVault': 'Hifadhi ya Majalada',
     'nav.clientPortal': 'Tovuti Salama ya Wateja',
     'nav.secureFiles': 'Ushirikiano Salama wa Nyaraka',
@@ -540,6 +568,32 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.upperHill': 'Ofisi za Upper Hill',
     'footer.rights': 'Haki zote zimehifadhiwa.',
     'footer.privilege': 'Kifungu cha 134 Sheria ya Ushahidi (Usiri wa Wakili na Mteja)',
+
+    // Legal Briefings Newsletter
+    'briefings.kicker': 'Muhtasari wa Kisheria wa Kila Mwezi · Dawati la Utafiti la Mawakili',
+    'briefings.title': 'Taarifa za Kisheria',
+    'briefings.subtitle': 'Uchambuzi rasmi wa kila mwezi wa sheria za mashirika, maamuzi ya Mahakama Kuu, miongozo ya ArdhiSasa, na sheria za kanda kwa washauri wakuu wa sheria na bodi za mashirika.',
+    'briefings.placeholder': 'Weka barua pepe ya shirika (mfano: counsel@enterprise.com)',
+    'briefings.subscribe': 'Jiunge na Taarifa',
+    'briefings.subscribing': 'Inasajili kwenye Daftari...',
+    'briefings.successTitle': 'Usajili wa Taarifa za Kisheria Umethibitishwa',
+    'briefings.successDesc': 'Barua pepe yako ya shirika imesajiliwa kwenye daftari la kila mwezi la chambers. Toleo lijalo litatumwa Jumanne ya kwanza ya mwezi.',
+    'briefings.printCurrent': 'Chapa Taarifa ya Hivi Punde (Nov 2026)',
+    'briefings.printConfirm': 'Chapa Kumbukumbu ya Usajili',
+    'briefings.downloadOffline': 'Pakua Nakala ya Nje ya Mtandao (.txt)',
+    'briefings.subAnother': 'Sajili anwani nyingine ya shirika',
+    'briefings.frequency': 'Kila mwezi · Inatumwa Jumanne ya kwanza · Usiri wa Kifungu 134 unalindwa',
+
+    // Law Firm Awards
+    'awards.kicker': 'Tuzo na Uidhinishaji wa Kitaaluma · Baa ya Kenya na Kanda',
+    'awards.title': 'Tuzo za Kampuni ya Mawakili',
+    'awards.subtitle': 'Tunaorodheshwa mara kwa mara na majarida huru ya kisheria duniani na mashirika ya kisheria miongoni mwa makampuni bora ya kesi za kibiashara, usuluhishi, na sheria za fedha Afrika Mashariki.',
+    'awards.filterAll': 'Tuzo Zote (6)',
+    'awards.filterGlobal': 'Chambers na Legal 500',
+    'awards.filterNational': 'LSK na Kanda',
+    'awards.filterFinance': 'Benki na Usuluhishi',
+    'awards.verifiedRef': 'Nambari ya Uidhinishaji:',
+    'awards.printCompendium': 'Chapa Orodha ya Tuzo',
 
     // Client Vault Modal
     'vault.badge': 'Muunganisho wa CTS Mahakama ya Kenya / NCIA · Ulinzi wa SSL wa Biti 256',

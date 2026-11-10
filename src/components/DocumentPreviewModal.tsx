@@ -3,10 +3,11 @@ import {
   X, FileText, Download, Printer, ScanText, PenTool, Highlighter,
   Clock, Sparkles, ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
   Maximize2, RotateCcw, ShieldCheck, CheckCircle2, Lock, Eye,
-  BookOpen, FileCheck, Landmark
+  BookOpen, FileCheck, Landmark, Stamp, Check
 } from 'lucide-react';
 import { MatterDocument, ClientMatter } from '../data/firmData';
 import { useLanguage } from '../context/LanguageContext';
+import { ClauseSignatureModal, ClauseSignatureData } from './ClauseSignatureModal';
 
 interface DocumentPreviewModalProps {
   isOpen: boolean;
@@ -37,6 +38,11 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [isIvoryTheme, setIsIvoryTheme] = useState<boolean>(true); // Ivory parchment vs dark mode reader
 
+  // e-Signature Request Workflow state
+  const [signingClauseInfo, setSigningClauseInfo] = useState<{ number: number; title: string; text: string } | null>(null);
+  const [clauseSignatures, setClauseSignatures] = useState<Record<number, ClauseSignatureData>>({});
+  const [signatureToast, setSignatureToast] = useState<string | null>(null);
+
   // Keyboard navigation & Escape
   useEffect(() => {
     if (!isOpen) return;
@@ -54,6 +60,46 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     setCurrentPage(1);
     setZoomLevel(100);
   }, [document]);
+
+  // Handle signature complete for DocumentPreviewModal
+  const handleSignatureComplete = (sig: ClauseSignatureData) => {
+    setClauseSignatures(prev => ({
+      ...prev,
+      [sig.clauseNumber]: sig
+    }));
+    setSignatureToast(`Clause ${sig.clauseNumber} signed under KICA § 83B by ${sig.signerName}`);
+    setTimeout(() => setSignatureToast(null), 4000);
+  };
+
+  const renderClauseBadge = (clauseNum: number) => {
+    const sig = clauseSignatures[clauseNum];
+    if (!sig) return null;
+    return (
+      <div className="mt-2 p-2.5 rounded-lg border border-emerald-600/40 bg-emerald-500/10 text-xs font-sans">
+        <div className="flex items-center justify-between text-[10px] font-mono text-emerald-800 font-bold border-b border-emerald-600/20 pb-1 mb-1.5">
+          <span className="flex items-center gap-1">
+            <Check className="w-3 h-3 text-emerald-600" />
+            <span>KICA § 83B EXECUTED · CLAUSE {clauseNum}</span>
+          </span>
+          <span>{sig.timestamp}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="font-semibold text-slate-900">{sig.signerName}</div>
+            <div className="text-[10px] text-slate-600">{sig.signerRole}</div>
+            <div className="font-mono text-[9px] text-emerald-700">{sig.kicaHash}</div>
+          </div>
+          <div className="p-1 bg-white border border-slate-200 rounded min-w-[100px] text-center shadow-xs">
+            {sig.signatureDataUrl ? (
+              <img src={sig.signatureDataUrl} alt="Signature" className="h-7 max-w-full mx-auto" />
+            ) : (
+              <span className="font-serif italic text-blue-900 text-xs font-bold">{sig.signerName}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (!isOpen || !document) return null;
 
@@ -289,9 +335,28 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     IN THE MATTER OF: {document.category.toUpperCase()} FILED PURSUANT TO SECTION 106B OF THE EVIDENCE ACT (CAP 80)
                   </p>
 
-                  <p>
-                    <strong>1. ORIGINATING APPLICATION:</strong> The Applicant / Claimant, <em>{matter.clientEntity}</em>, through its instructed Senior Counsel of <strong>Petersons Angwenyi &amp; Associates Advocates</strong>, moves this honorable forum seeking urgent conservatory orders preserving the contractual res.
-                  </p>
+                  {/* Clause 1 with e-Signature Button */}
+                  <div className="p-3 rounded-lg border border-black/15 bg-black/[0.02]">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <strong className="text-slate-900 font-sans uppercase">1. ORIGINATING APPLICATION:</strong>
+                      <button
+                        type="button"
+                        onClick={() => setSigningClauseInfo({
+                          number: 1,
+                          title: "Originating Application for Conservatory Orders",
+                          text: `The Applicant / Claimant, ${matter.clientEntity}, through its instructed Senior Counsel of Petersons Angwenyi & Associates Advocates, moves this honorable forum seeking urgent conservatory orders preserving the contractual res.`
+                        })}
+                        className="text-[11px] font-mono text-[#8C6D3B] hover:text-[#111] flex items-center gap-1 font-bold px-2 py-0.5 rounded bg-black/5 hover:bg-black/10 transition-colors"
+                      >
+                        <PenTool className="w-3 h-3 text-[#8C6D3B]" />
+                        <span>{clauseSignatures[1] ? 'Signed KICA' : 'Sign Clause 1'}</span>
+                      </button>
+                    </div>
+                    <p>
+                      The Applicant / Claimant, <em>{matter.clientEntity}</em>, through its instructed Senior Counsel of <strong>Petersons Angwenyi &amp; Associates Advocates</strong>, moves this honorable forum seeking urgent conservatory orders preserving the contractual res.
+                    </p>
+                    {renderClauseBadge(1)}
+                  </div>
 
                   <p>
                     <strong>2. JURISDICTIONAL STATEMENT:</strong> This Court and Tribunal is fully seised of territorial and subject-matter jurisdiction pursuant to Section 6 of the Civil Procedure Act (Cap 21) and the arbitration agreement executed between the parties.
@@ -314,9 +379,28 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     <strong>3. FACTUAL MATRIX:</strong> On or about the relevant contractual commencement date, the parties entered into an engineering, procurement, and construction agreement governed by the FIDIC Conditions of Contract.
                   </p>
 
-                  <p>
-                    <strong>4. CONTRACTOR DEFAULT &amp; DELAY:</strong> The Respondent failed to adhere to the critical path construction timetable, resulting in an unexcused delay of 184 days. The Dispute Adjudication Board (DAB) determined full contractor culpability and dismissed the claims for extension of time.
-                  </p>
+                  {/* Clause 4 with e-Signature Button */}
+                  <div className="p-3 rounded-lg border border-black/15 bg-black/[0.02]">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <strong className="text-slate-900 font-sans uppercase">4. CONTRACTOR DEFAULT &amp; DELAY:</strong>
+                      <button
+                        type="button"
+                        onClick={() => setSigningClauseInfo({
+                          number: 4,
+                          title: "Contractor Default & Delay Claim",
+                          text: "The Respondent failed to adhere to the critical path construction timetable, resulting in an unexcused delay of 184 days. The Dispute Adjudication Board (DAB) determined full contractor culpability and dismissed the claims for extension of time."
+                        })}
+                        className="text-[11px] font-mono text-[#8C6D3B] hover:text-[#111] flex items-center gap-1 font-bold px-2 py-0.5 rounded bg-black/5 hover:bg-black/10 transition-colors"
+                      >
+                        <PenTool className="w-3 h-3 text-[#8C6D3B]" />
+                        <span>{clauseSignatures[4] ? 'Signed KICA' : 'Sign Clause 4'}</span>
+                      </button>
+                    </div>
+                    <p>
+                      The Respondent failed to adhere to the critical path construction timetable, resulting in an unexcused delay of 184 days. The Dispute Adjudication Board (DAB) determined full contractor culpability and dismissed the claims for extension of time.
+                    </p>
+                    {renderClauseBadge(4)}
+                  </div>
 
                   <p>
                     <strong>5. EVIDENCE ACT SECTION 80:</strong> The facts deposed herein are true to the best of knowledge, information, and belief of the deponent, derived from certified commercial logs and electronic transmissions.
@@ -330,9 +414,28 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     SCHEDULE OF DAMAGES &amp; FORENSIC EXHIBITS
                   </div>
 
-                  <p>
-                    <strong>6. LIQUIDATED DAMAGES COMPUTATION:</strong> Pursuant to contractual Sub-Clause 8.7, liquidated delay damages have accrued at the rate of USD $45,000 per calendar day, yielding a crystallized claim of USD $8,280,000.
-                  </p>
+                  {/* Clause 6 with e-Signature Button */}
+                  <div className="p-3 rounded-lg border border-black/15 bg-black/[0.02]">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <strong className="text-slate-900 font-sans uppercase">6. LIQUIDATED DAMAGES COMPUTATION:</strong>
+                      <button
+                        type="button"
+                        onClick={() => setSigningClauseInfo({
+                          number: 6,
+                          title: "Liquidated Damages Computation USD 14,250,000",
+                          text: "Pursuant to contractual Sub-Clause 8.7, liquidated delay damages have accrued at the rate of USD $45,000 per calendar day, yielding a crystallized claim of USD $8,280,000."
+                        })}
+                        className="text-[11px] font-mono text-[#8C6D3B] hover:text-[#111] flex items-center gap-1 font-bold px-2 py-0.5 rounded bg-black/5 hover:bg-black/10 transition-colors"
+                      >
+                        <PenTool className="w-3 h-3 text-[#8C6D3B]" />
+                        <span>{clauseSignatures[6] ? 'Signed KICA' : 'Sign Clause 6'}</span>
+                      </button>
+                    </div>
+                    <p>
+                      Pursuant to contractual Sub-Clause 8.7, liquidated delay damages have accrued at the rate of USD $45,000 per calendar day, yielding a crystallized claim of USD $8,280,000.
+                    </p>
+                    {renderClauseBadge(6)}
+                  </div>
 
                   <div className="overflow-x-auto my-3">
                     <table className="w-full border-collapse border border-black/20 text-xs font-mono">
@@ -493,6 +596,26 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
               </button>
             )}
 
+            {/* e-Signature on Clause */}
+            <button
+              type="button"
+              onClick={() => {
+                const clauseConfig = currentPage === 1 
+                  ? { number: 1, title: 'Originating Application & Injunction', text: `The Applicant / Claimant, ${matter.clientEntity}, through its instructed Senior Counsel of Petersons Angwenyi & Associates Advocates, moves this honorable forum seeking urgent conservatory orders preserving the contractual res.` }
+                  : currentPage === 2
+                  ? { number: 4, title: 'Contractor Default & Delay Claim', text: 'The Respondent failed to adhere to the critical path construction timetable, resulting in an unexcused delay of 184 days. The Dispute Adjudication Board (DAB) determined full contractor culpability and dismissed the claims for extension of time.' }
+                  : currentPage === 3
+                  ? { number: 6, title: 'Liquidated Damages Computation USD 14,250,000', text: 'Pursuant to contractual Sub-Clause 8.7, liquidated delay damages have accrued at the rate of USD $45,000 per calendar day, yielding a crystallized claim of USD $8,280,000.' }
+                  : { number: 8, title: 'Prayers for Permanent Conservatory Relief', text: 'An interim conservatory injunction do issue restraining unilateral encashment of performance bonds.' };
+                setSigningClauseInfo(clauseConfig);
+              }}
+              className="px-3 py-1.5 bg-[#18283E] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#DFBE82] rounded-lg text-xs font-semibold border border-[#C5A880]/40 transition-all flex items-center gap-1.5 shadow-sm"
+              title="Sign clause on current page via signature pad or stored profile"
+            >
+              <PenTool className="w-3.5 h-3.5 text-[#C5A880]" />
+              <span>Sign Clause {currentPage === 1 ? '1' : currentPage === 2 ? '4' : currentPage === 3 ? '6' : '8'}</span>
+            </button>
+
             {/* Print Document */}
             <button
               type="button"
@@ -521,6 +644,22 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         </div>
 
       </div>
+
+      {/* Integrated Clause e-Signature Modal */}
+      {signingClauseInfo && (
+        <ClauseSignatureModal
+          isOpen={!!signingClauseInfo}
+          onClose={() => setSigningClauseInfo(null)}
+          clauseNumber={signingClauseInfo.number}
+          clauseTitle={signingClauseInfo.title}
+          clauseText={signingClauseInfo.text}
+          documentTitle={document.name}
+          defaultSignerName={matter.clientEntity.includes('Consolidated') ? 'Dr. Angela Kibera' : 'Milton Angwenyi, SC'}
+          defaultSignerRole={matter.clientEntity.includes('Consolidated') ? 'Group General Counsel' : 'Lead Senior Counsel'}
+          defaultSignerEntity={matter.clientEntity}
+          onSignatureComplete={handleSignatureComplete}
+        />
+      )}
     </div>
   );
 };

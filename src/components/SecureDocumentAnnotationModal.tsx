@@ -4,10 +4,11 @@ import {
   History, UserCheck, Check, Trash2, Filter, 
   Download, Lock, Clock, ArrowRight, Eye, EyeOff, FileText, 
   Scale, Building2, GitBranch, Layers, GitCommit, Sparkles, 
-  AlertCircle, CheckCircle2, Search, FileDiff
+  AlertCircle, CheckCircle2, Search, FileDiff, PenTool, Stamp
 } from 'lucide-react';
 import { MatterDocument, ClientMatter } from '../data/firmData';
 import { useLanguage } from '../context/LanguageContext';
+import { ClauseSignatureModal, ClauseSignatureData } from './ClauseSignatureModal';
 
 export interface DocumentAnnotation {
   id: string;
@@ -462,6 +463,25 @@ export const SecureDocumentAnnotationModal: React.FC<SecureDocumentAnnotationMod
   const [replyText, setReplyText] = useState('');
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
 
+  // e-Signature Request and Execution States
+  const [signingClause, setSigningClause] = useState<DocumentClause | null>(null);
+  const [clauseSignatures, setClauseSignatures] = useState<Record<number, ClauseSignatureData>>({
+    6: {
+      clauseNumber: 6,
+      clauseTitle: "Compliance with ARO Statutory Scale & Escrow Deposit",
+      clauseText: "The Plaintiff has tendered the full statutory deposit and escrow security totaling KES 50,000,000 into the designated Chambers Escrow Account maintained at KCB Bank Kenya Upper Hill Corporate Branch (Certificate Ref: ESC-KCB-PAA-8841-KE) pursuant to the Advocates (Remuneration) Order (ARO) Cap 16.",
+      signerName: "Dr. Angela Kibera",
+      signerRole: "Group General Counsel & Company Secretary",
+      signerEntity: "Consolidated Energy Holdings Ltd",
+      signatureType: "profile",
+      typedSignature: "Dr. Angela Kibera",
+      signatureStyle: "cursive",
+      timestamp: "04 Nov 2026, 10:30 AM EAT",
+      isoTime: "2026-11-04T10:30:00",
+      kicaHash: "SHA256:7D9C3E1B9A"
+    }
+  });
+
   // Currently active version object
   const currentVersion = useMemo(() => {
     return versions.find(v => v.versionId === currentVersionId) || versions[0];
@@ -624,6 +644,51 @@ export const SecureDocumentAnnotationModal: React.FC<SecureDocumentAnnotationMod
     }));
     setNotificationToast(`Annotation retracted from Version ${currentVersion.versionId}.`);
     setTimeout(() => setNotificationToast(null), 3000);
+  };
+
+  // Handle completion of e-Signature on a clause
+  const handleSignatureComplete = (sig: ClauseSignatureData) => {
+    setClauseSignatures(prev => ({
+      ...prev,
+      [sig.clauseNumber]: sig
+    }));
+
+    // Record this signature in the immutable version audit trail
+    const newAnn: DocumentAnnotation = {
+      id: `ann-sig-${currentVersion.versionId}-${Date.now()}`,
+      documentName: document.name,
+      versionId: currentVersion.versionId,
+      type: 'comment',
+      color: 'emerald',
+      clauseNumber: sig.clauseNumber,
+      clauseTitle: sig.clauseTitle,
+      targetExcerpt: `KICA § 83B Execution by ${sig.signerName} (${sig.signerRole})`,
+      commentText: `OFFICIAL e-SIGNATURE EXECUTED: Verified under Kenya Information and Communications Act § 83B & Evidence Act § 106B. Signer: ${sig.signerName} (${sig.signerRole}, ${sig.signerEntity}). Method: ${sig.signatureType.toUpperCase()}. Cryptographic Audit Hash: ${sig.kicaHash}.`,
+      author: {
+        name: sig.signerName,
+        role: sig.signerRole,
+        affiliation: sig.signerEntity.includes('Advocates') ? 'firm' : 'client',
+        title: sig.signerEntity
+      },
+      timestamp: sig.timestamp,
+      isoTime: sig.isoTime,
+      status: 'resolved',
+      isPrivileged: false,
+      checksum: sig.kicaHash
+    };
+
+    setVersions(prev => prev.map(v => {
+      if (v.versionId === currentVersion.versionId) {
+        return {
+          ...v,
+          annotations: [newAnn, ...v.annotations]
+        };
+      }
+      return v;
+    }));
+
+    setNotificationToast(`e-Signature successfully affixed to Clause ${sig.clauseNumber} by ${sig.signerName} under KICA § 83B.`);
+    setTimeout(() => setNotificationToast(null), 4500);
   };
 
   // Export Versioned Audit Trail
@@ -898,6 +963,22 @@ export const SecureDocumentAnnotationModal: React.FC<SecureDocumentAnnotationMod
               <span>Sticky Note</span>
             </button>
 
+            {/* e-Signature Quick Launcher */}
+            <button
+              onClick={() => {
+                const target = currentVersion.clauses.find(c =>
+                  currentVersion.annotations.some(a => a.clauseNumber === c.number && a.type === 'highlight')
+                ) || currentVersion.clauses[0];
+                setSigningClause(target);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#162338] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#DFBE82] border border-[#C5A880]/40 font-medium transition-all shadow-sm"
+              title="Request or execute an e-signature on a highlighted clause"
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              <span>e-Signature</span>
+              <span className="text-[10px] font-mono opacity-80">KICA § 83B</span>
+            </button>
+
             {/* Color Picker for Highlights */}
             <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-[#222E42]">
               <span className="text-[10px] text-[#717E94] mr-1 hidden md:inline">Color:</span>
@@ -1064,6 +1145,22 @@ export const SecureDocumentAnnotationModal: React.FC<SecureDocumentAnnotationMod
 
                         {/* Inline Annotation Buttons */}
                         <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                          {/* e-Signature Button */}
+                          <button
+                            onClick={() => setSigningClause(clause)}
+                            title={`Sign Clause ${clause.number} under KICA § 83B`}
+                            className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 transition-all ${
+                              clauseSignatures[clause.number]
+                                ? 'bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-semibold'
+                                : 'bg-[#172235] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#DFBE82] border border-[#C5A880]/30'
+                            }`}
+                          >
+                            <PenTool className="w-3 h-3 text-[#C5A880]" />
+                            <span className="hidden sm:inline">
+                              {clauseSignatures[clause.number] ? 'Signed KICA' : 'Sign Clause'}
+                            </span>
+                          </button>
+
                           <button
                             onClick={() => handleQuickHighlight(clause)}
                             title={`Highlight in Version ${currentVersion.versionId}`}
@@ -1110,6 +1207,78 @@ export const SecureDocumentAnnotationModal: React.FC<SecureDocumentAnnotationMod
                       <p className="text-sm leading-relaxed text-slate-200">
                         {clause.text}
                       </p>
+
+                      {/* Executed e-Signature Certificate Card if clause is signed */}
+                      {clauseSignatures[clause.number] && (
+                        <div className="mt-3.5 p-3.5 rounded-xl bg-[#09101B] border border-emerald-500/40 shadow-lg text-xs font-sans">
+                          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-[#1A2638]">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-emerald-400">
+                                <Check className="w-3 h-3" />
+                              </span>
+                              <div>
+                                <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400 font-bold block">
+                                  Digitally Executed Clause · KICA § 83B Certified
+                                </span>
+                                <span className="text-white font-semibold text-xs">
+                                  {clauseSignatures[clause.number].signerName}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono text-[#8C98AE]">
+                                {clauseSignatures[clause.number].timestamp}
+                              </span>
+                              <button
+                                onClick={() => setSigningClause(clause)}
+                                className="px-2 py-0.5 rounded bg-[#162235] hover:bg-[#202E46] text-[#C5A880] text-[10px] font-mono border border-[#C5A880]/30 transition-colors"
+                              >
+                                Re-sign
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                            {/* Signature Graphic Display */}
+                            <div className="p-2.5 rounded-lg bg-white/95 border border-slate-300 flex items-center justify-center min-h-[56px]">
+                              {clauseSignatures[clause.number].signatureDataUrl ? (
+                                <img
+                                  src={clauseSignatures[clause.number].signatureDataUrl}
+                                  alt={`Signature of ${clauseSignatures[clause.number].signerName}`}
+                                  className="h-10 max-w-full object-contain filter contrast-125"
+                                />
+                              ) : clauseSignatures[clause.number].signatureStyle === 'cursive' ? (
+                                <span className="text-xl italic font-serif text-[#1E3A8A] font-bold tracking-wide">
+                                  {clauseSignatures[clause.number].signerName}
+                                </span>
+                              ) : clauseSignatures[clause.number].signatureStyle === 'formal' ? (
+                                <span className="text-sm font-cinzel text-slate-900 font-bold tracking-widest uppercase">
+                                  {clauseSignatures[clause.number].signerName}
+                                </span>
+                              ) : (
+                                <span className="text-xs font-mono font-bold text-slate-900">
+                                  // {clauseSignatures[clause.number].signerName} //
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Attestation & Integrity Hash */}
+                            <div className="space-y-1 text-[11px] text-[#A6B4C8]">
+                              <div className="text-white font-medium truncate">
+                                {clauseSignatures[clause.number].signerRole}
+                              </div>
+                              <div className="text-[#8C98AE] truncate text-[10px]">
+                                {clauseSignatures[clause.number].signerEntity}
+                              </div>
+                              <div className="font-mono text-[10px] text-emerald-400 truncate flex items-center gap-1 pt-0.5">
+                                <ShieldCheck className="w-3 h-3 shrink-0" />
+                                <span>{clauseSignatures[clause.number].kicaHash}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* New Annotation Input Form (when active for this clause) */}
                       {targetClauseForNote === clause.number && (
@@ -1427,6 +1596,22 @@ export const SecureDocumentAnnotationModal: React.FC<SecureDocumentAnnotationMod
         </div>
 
       </div>
+
+      {/* Clause e-Signature Modal (Workflow for Drawing, Stored Profile, or Biometric WebAuthn) */}
+      {signingClause && (
+        <ClauseSignatureModal
+          isOpen={!!signingClause}
+          onClose={() => setSigningClause(null)}
+          clauseNumber={signingClause.number}
+          clauseTitle={signingClause.title}
+          clauseText={signingClause.text}
+          documentTitle={document.name}
+          defaultSignerName={userProfile.name}
+          defaultSignerRole={userProfile.role}
+          defaultSignerEntity={userProfile.affiliation === 'firm' ? 'Petersons Angwenyi & Associates Advocates' : matter.clientEntity}
+          onSignatureComplete={handleSignatureComplete}
+        />
+      )}
     </div>
   );
 };

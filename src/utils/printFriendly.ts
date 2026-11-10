@@ -1,8 +1,8 @@
-import { CaseBrief, LegalArticle } from '../data/firmData';
+import { CaseBrief, LegalArticle, LawFirmAward } from '../data/firmData';
 
 export interface PrintDocumentMetadata {
   docRef: string;
-  docType: 'Judicial Precedent Briefing' | 'Law Review & Regulatory Insight';
+  docType: 'Judicial Precedent Briefing' | 'Law Review & Regulatory Insight' | 'Law Firm Honors & Accreditations';
   title: string;
   subtitle: string;
   dateGenerated: string;
@@ -78,6 +78,57 @@ export function formatCaseBriefForPrint(brief: CaseBrief): PrintDocument {
       'Civil Procedure Act (Cap 21, Laws of Kenya)',
       'Arbitration Act 1995 (Act No. 4 of 1995)',
       'Constitution of Kenya 2010 (Article 159 - Judicial Authority)',
+      'Advocates Act (Cap 16, Laws of Kenya)'
+    ],
+    firmDetails: {
+      name: 'Petersons Angwenyi & Associates Advocates',
+      chambers: 'Upper Hill Chambers, 8th Floor, Mara Road, Nairobi',
+      address: 'P.O. Box 48920-00100 GPO, Nairobi, Republic of Kenya',
+      telephone: '+254 (0) 20 271 8840 / +254 (0) 722 000 000',
+      email: 'litigation@paalawkenya.com',
+      rollNumber: 'Senior Counsel Milton Angwenyi (Roll: P.105/7412/95)',
+      lskRef: 'LSK Firm Certificate No. PAA-1998-NRB'
+    }
+  };
+}
+
+export function formatAllCaseBriefsForPrint(briefs: CaseBrief[]): PrintDocument {
+  const currentDate = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  const sections = briefs.flatMap((brief, idx) => [
+    {
+      heading: `${idx + 1}. ${brief.matterName.toUpperCase()}`,
+      content: `Judicial Forum / Arbitral Seat: ${brief.forum}\nPrecedent Reporting Year: ${brief.year}\nInstructing Client Sector: ${brief.clientCategory}\nMatter Exposure / Transaction Value: ${brief.value}\n\nFactual Summary:\n${brief.summary}`,
+      isHighlight: false
+    },
+    {
+      heading: `JUDICIAL DETERMINATION & PRECEDENTIAL IMPACT (CASE ${idx + 1})`,
+      content: brief.impact,
+      isHighlight: true
+    }
+  ]);
+
+  return {
+    meta: {
+      docRef: `PAA/PRECEDENTS/COMPENDIUM/${new Date().getFullYear()}`,
+      docType: 'Judicial Precedent Briefing',
+      title: 'Landmark Judicial Precedents & Milestone Transactions Compendium',
+      subtitle: 'Official Law Reports & Arbitral Precedents Series · Petersons Angwenyi & Associates',
+      dateGenerated: currentDate,
+      category: 'Commercial Litigation, Arbitration, Energy & Sovereign Infrastructure',
+      jurisdiction: 'Superior Courts of Kenya, Court of Appeal, Supreme Court & Regional Arbitral Tribunals',
+      citation: `PAA Precedent Digest Vol. ${new Date().getFullYear()}`
+    },
+    sections,
+    statutoryBasis: [
+      'Civil Procedure Act (Cap 21, Laws of Kenya)',
+      'Arbitration Act 1995 (Act No. 4 of 1995)',
+      'Constitution of Kenya 2010 (Article 159 - Judicial Authority)',
+      'Evidence Act (Cap 80, Laws of Kenya)',
       'Advocates Act (Cap 16, Laws of Kenya)'
     ],
     firmDetails: {
@@ -192,6 +243,105 @@ export function formatAllLegalInsightsForPrint(articles: LegalArticle[]): PrintD
       email: 'briefings@paalawkenya.com',
       rollNumber: 'Chambers Research & Knowledge Management Desk',
       lskRef: 'LSK Legal Education Commendation (2025)'
+    }
+  };
+}
+
+export function formatSingleAwardForPrint(award: LawFirmAward): PrintDocument {
+  const currentDate = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  return {
+    meta: {
+      docRef: award.accreditationRef,
+      docType: 'Law Firm Honors & Accreditations',
+      title: `${award.title} (${award.year})`,
+      subtitle: `${award.organization} · ${award.tier}`,
+      dateGenerated: currentDate,
+      category: award.category,
+      jurisdiction: `Republic of Kenya, East Africa & Global Bar (${award.scope})`,
+      citation: `${award.organization} Official Law Directory Rankings`
+    },
+    sections: [
+      {
+        heading: '1. CONFERRED HONORS & EDITORIAL CITATION',
+        content: award.citation,
+        isHighlight: true
+      },
+      {
+        heading: '2. RECOGNITION TIER & STATUTORY COMPETENCE',
+        content: `Awarding Body: ${award.organization}\nHonors Tier: ${award.tier}\nGeographic Scope: ${award.scope}\nSpecialization Category: ${award.category}\nAccreditation Docket Ref: ${award.accreditationRef}`
+      },
+      {
+        heading: '3. INDEPENDENT DIRECTORY METHODOLOGY',
+        content: [
+          'Peer accreditations and directory rankings are established through rigorous peer interviews, general counsel client feedback, and verified courtroom/transaction audits across Eastern Africa.',
+          'Petersons Angwenyi & Associates Advocates maintains active practising roll certificates pursuant to the Advocates Act (Cap 16) and Law Society of Kenya governance standards.'
+        ]
+      }
+    ],
+    statutoryBasis: [
+      'Advocates Act (Cap 16, Laws of Kenya)',
+      'Law Society of Kenya Act 2014',
+      'Constitution of Kenya 2010 (Article 50 & 159)',
+      'Evidence Act (Cap 80, Laws of Kenya) § 134'
+    ],
+    firmDetails: {
+      name: 'Petersons Angwenyi & Associates Advocates',
+      chambers: 'Upper Hill Chambers, 8th Floor, Mara Road, Nairobi',
+      address: 'P.O. Box 48920-00100 GPO, Nairobi, Republic of Kenya',
+      telephone: '+254 (0) 20 271 8840 / +254 (0) 722 000 000',
+      email: 'litigation@paalawkenya.com',
+      rollNumber: 'Senior Counsel Milton Angwenyi (Roll: P.105/7412/95)',
+      lskRef: 'LSK Firm Certificate No. PAA-1998-NRB'
+    }
+  };
+}
+
+export function formatAwardsCompendiumForPrint(awards: LawFirmAward[]): PrintDocument {
+  const currentDate = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  const sections = awards.flatMap((award, idx) => [
+    {
+      heading: `${idx + 1}. ${award.organization.toUpperCase()} (${award.year}) - ${award.tier.toUpperCase()}`,
+      content: `Title: ${award.title}\nCategory: ${award.category}\nScope: ${award.scope}\nVerification Docket: ${award.accreditationRef}\n\nEditorial Citation:\n"${award.citation}"`,
+      isHighlight: idx === 0
+    }
+  ]);
+
+  return {
+    meta: {
+      docRef: `PAA/AWARDS/COMPENDIUM/${new Date().getFullYear()}`,
+      docType: 'Law Firm Honors & Accreditations',
+      title: 'Law Firm Honors, Directory Accreditations & Benchmark Rankings',
+      subtitle: 'Official Chambers Honors Compendium · Chambers Global, The Legal 500, IFLR1000 & LSK',
+      dateGenerated: currentDate,
+      category: 'Commercial Litigation, Arbitration, Corporate Finance & M&A',
+      jurisdiction: 'Republic of Kenya, East African Community (EAC) & Commonwealth Jurisdiction',
+      citation: `PAA Institutional Honors & Peer Review Digest Vol. ${new Date().getFullYear()}`
+    },
+    sections,
+    statutoryBasis: [
+      'Advocates Act (Cap 16, Laws of Kenya)',
+      'Law Society of Kenya Act 2014',
+      'Arbitration Act 1995 (Cap 49, Laws of Kenya)',
+      'Evidence Act (Cap 80, Laws of Kenya)'
+    ],
+    firmDetails: {
+      name: 'Petersons Angwenyi & Associates Advocates',
+      chambers: 'Upper Hill Chambers, 8th Floor, Mara Road, Nairobi',
+      address: 'P.O. Box 48920-00100 GPO, Nairobi, Republic of Kenya',
+      telephone: '+254 (0) 20 271 8840 / +254 (0) 722 000 000',
+      email: 'litigation@paalawkenya.com',
+      rollNumber: 'Senior Counsel Milton Angwenyi (Roll: P.105/7412/95)',
+      lskRef: 'LSK Firm Certificate No. PAA-1998-NRB'
     }
   };
 }

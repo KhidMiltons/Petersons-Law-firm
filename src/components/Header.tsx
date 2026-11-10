@@ -134,6 +134,12 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {t('nav.insights')}
               </a>
+              <a
+                href="#awards"
+                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0"
+              >
+                {t('nav.awards')}
+              </a>
               <button
                 onClick={onOpenPortal || onOpenVault}
                 className="text-[#E4C999] hover:text-white transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer font-medium px-2.5 py-1 rounded-lg bg-[#121927] hover:bg-[#182338] border border-[#C5A880]/30 hover:border-[#C5A880]/60 shadow-sm relative group"
@@ -388,6 +394,13 @@ export const Header: React.FC<HeaderProps> = ({
                 className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-1"
               >
                 {t('nav.insights')}
+              </a>
+              <a
+                href="#awards"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-1"
+              >
+                {t('nav.awards')}
               </a>
 
               {/* Secure Client Portal Link with Alert Badge */}

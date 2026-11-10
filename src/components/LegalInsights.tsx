@@ -5,13 +5,27 @@ import { useLanguage } from '../context/LanguageContext';
 import { PrintFriendlyModal } from './PrintFriendlyModal';
 import { formatLegalInsightForPrint, formatAllLegalInsightsForPrint, PrintDocument } from '../utils/printFriendly';
 
-export const LegalInsights: React.FC = () => {
+interface LegalInsightsProps {
+  onSelectArticle?: (article: LegalArticle | null) => void;
+}
+
+export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle }) => {
   const { t } = useLanguage();
   const [activeArticle, setActiveArticle] = useState<LegalArticle | null>(null);
   const [printDoc, setPrintDoc] = useState<PrintDocument | null>(null);
 
+  const handleOpenArticle = (article: LegalArticle) => {
+    setActiveArticle(article);
+    if (onSelectArticle) onSelectArticle(article);
+  };
+
+  const handleCloseArticle = () => {
+    setActiveArticle(null);
+    if (onSelectArticle) onSelectArticle(null);
+  };
+
   // Directly triggers browser print dialog targeting #printable-document via index.css @media print
-  const handleDownloadPdf = (article: LegalArticle) => {
+  const handlePrintSummary = (article: LegalArticle) => {
     const doc = formatLegalInsightForPrint(article);
     setPrintDoc(doc);
     setTimeout(() => {
@@ -20,7 +34,7 @@ export const LegalInsights: React.FC = () => {
   };
 
   // Directly triggers browser print dialog for full legal insights compendium
-  const handleDownloadCompendiumPdf = () => {
+  const handlePrintSummaryCompendium = () => {
     const doc = formatAllLegalInsightsForPrint(LEGAL_ARTICLES);
     setPrintDoc(doc);
     setTimeout(() => {
@@ -32,7 +46,7 @@ export const LegalInsights: React.FC = () => {
     <section id="insights" className="py-24 bg-[#080B11] border-b border-[#1E2536] relative">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         
-        {/* Section Header with Dedicated Download as PDF Action */}
+        {/* Section Header with Dedicated Print Summary Action */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-[#C5A880] mb-3 font-semibold">
@@ -46,14 +60,14 @@ export const LegalInsights: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 shrink-0 flex-wrap">
             <button
-              onClick={handleDownloadCompendiumPdf}
+              onClick={handlePrintSummaryCompendium}
               className="flex items-center gap-2 px-4 py-2.5 bg-[#121927] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#C5A880] text-xs font-semibold rounded-xl border border-[#C5A880]/40 hover:border-[#C5A880] transition-all shadow-sm group"
-              title="Download Complete Legal Insights Compendium as PDF (triggers print dialog)"
+              title="Print Summary of all legal insight articles using established #printable-document print styles"
             >
-              <Download className="w-4 h-4 text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
-              <span>Download as PDF</span>
+              <Printer className="w-4 h-4 text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
+              <span>Print Summary Compendium</span>
             </button>
           </div>
         </div>
@@ -79,14 +93,14 @@ export const LegalInsights: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Discreet Print Icon */}
+                  {/* Dedicated Print Summary Quick Icon */}
                   <button
-                    onClick={() => handleDownloadPdf(article)}
-                    title="Download Legal Insight as PDF"
+                    onClick={() => handlePrintSummary(article)}
+                    title="Print Summary for this insight article (triggers browser print action with #printable-document styles)"
                     className="p-1.5 rounded-lg text-[#8C98AE] hover:text-[#DFBE82] hover:bg-[#161F2E] border border-transparent hover:border-[#C5A880]/30 transition-all flex items-center gap-1 text-[11px] font-sans group"
                   >
-                    <Download className="w-3.5 h-3.5 text-[#8C98AE] group-hover:text-[#C5A880] transition-colors" />
-                    <span className="text-[10px] uppercase font-mono text-[#78869E] group-hover:text-[#E4C999]">PDF</span>
+                    <Printer className="w-3.5 h-3.5 text-[#C5A880] group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] uppercase font-mono text-[#78869E] group-hover:text-[#E4C999]">Print</span>
                   </button>
                 </div>
 
@@ -105,20 +119,21 @@ export const LegalInsights: React.FC = () => {
 
               <div className="mt-6 pt-4 border-t border-[#1C2436] flex items-center justify-between gap-2 flex-wrap">
                 <button
-                  onClick={() => setActiveArticle(article)}
+                  onClick={() => handleOpenArticle(article)}
                   className="text-xs text-[#C5A880] hover:text-[#DFBE82] font-semibold tracking-wider uppercase flex items-center gap-1.5 transition-colors"
                 >
                   <span>{t('insights.readFull')}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
 
+                {/* Dedicated Print Summary Button */}
                 <button
-                  onClick={() => handleDownloadPdf(article)}
-                  title="Download as PDF (triggers browser print dialog)"
+                  onClick={() => handlePrintSummary(article)}
+                  title="Print Summary using #printable-document print styles"
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-[#141D2C] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#E4C999] text-xs font-medium rounded-lg border border-[#C5A880]/30 hover:border-[#C5A880] transition-all shadow-sm group"
                 >
-                  <Download className="w-3.5 h-3.5 text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
-                  <span>Download as PDF</span>
+                  <Printer className="w-3.5 h-3.5 text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
+                  <span>Print Summary</span>
                 </button>
               </div>
             </article>
@@ -146,15 +161,15 @@ export const LegalInsights: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleDownloadPdf(activeArticle)}
-                    title="Download as PDF (triggers browser print dialog)"
+                    onClick={() => handlePrintSummary(activeArticle)}
+                    title="Print Summary (triggers browser print dialog with #printable-document)"
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#172132] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#C5A880] text-xs font-semibold rounded-lg border border-[#C5A880]/40 transition-all shadow-sm group"
                   >
-                    <Download className="w-3.5 h-3.5 text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
-                    <span>Download as PDF</span>
+                    <Printer className="w-3.5 h-3.5 text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
+                    <span>Print Summary</span>
                   </button>
                   <button
-                    onClick={() => setActiveArticle(null)}
+                    onClick={handleCloseArticle}
                     className="p-2 text-[#8C98AE] hover:text-white"
                   >
                     <X className="w-5 h-5" />
@@ -181,15 +196,15 @@ export const LegalInsights: React.FC = () => {
 
               <div className="p-4 bg-[#121927] border-t border-[#222E46] flex items-center justify-between">
                 <button
-                  onClick={() => handleDownloadPdf(activeArticle)}
+                  onClick={() => handlePrintSummary(activeArticle)}
                   className="flex items-center gap-1.5 text-xs text-[#8C98AE] hover:text-[#DFBE82] transition-colors group"
                 >
-                  <Download className="w-3.5 h-3.5 text-[#C5A880] group-hover:text-[#DFBE82] transition-colors" />
-                  <span>Download as PDF</span>
+                  <Printer className="w-3.5 h-3.5 text-[#C5A880] group-hover:text-[#DFBE82] transition-colors" />
+                  <span>Print Article Summary</span>
                 </button>
 
                 <button
-                  onClick={() => setActiveArticle(null)}
+                  onClick={handleCloseArticle}
                   className="px-5 py-2 bg-[#C5A880] text-[#0A0E17] font-semibold text-xs tracking-wider uppercase rounded-lg hover:brightness-110"
                 >
                   {t('insights.close')}

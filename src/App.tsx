@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LanguageProvider } from './context/LanguageContext';
 import { Header } from './components/Header';
+import { GlobalBreadcrumbs } from './components/GlobalBreadcrumbs';
 import { HeroSection } from './components/HeroSection';
 import { ChambersLeadership } from './components/ChambersLeadership';
 import { PracticeAreas } from './components/PracticeAreas';
@@ -8,6 +9,7 @@ import { AdvocatesTeam } from './components/AdvocatesTeam';
 import { CaseBriefs } from './components/CaseBriefs';
 import { FeeCalculator } from './components/FeeCalculator';
 import { LegalInsights } from './components/LegalInsights';
+import { FirmAwards } from './components/FirmAwards';
 import { NairobiChambers } from './components/NairobiChambers';
 import { FAQ } from './components/FAQ';
 import { ClientTestimonials } from './components/ClientTestimonials';
@@ -23,6 +25,15 @@ export default function App() {
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  // Active section & journey breadcrumb tracking
+  const [activeSection, setActiveSection] = useState<string>('hero');
+  const [journeyHistory, setJourneyHistory] = useState<string[]>(['hero']);
+  const [subItem, setSubItem] = useState<{
+    type: 'practice' | 'case' | 'insight' | 'portal';
+    title: string;
+    parentSection: string;
+  } | null>(null);
+
   const [focusedPracticeId, setFocusedPracticeId] = useState<string | null>(null);
   const [focusedCaseId, setFocusedCaseId] = useState<string | null>(null);
   const [focusedFaqId, setFocusedFaqId] = useState<string | null>(null);
@@ -32,6 +43,60 @@ export default function App() {
     estimate?: string;
     advocate?: string;
   }>({});
+
+  // Smooth scroll and record journey step
+  const handleNavigateSection = useCallback((sectionId: string) => {
+    if (sectionId === 'hero') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setActiveSection('hero');
+    } else {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        setActiveSection(sectionId);
+      }
+    }
+    setJourneyHistory((prev) => {
+      if (prev[prev.length - 1] === sectionId) return prev;
+      return [...prev.slice(-12), sectionId];
+    });
+  }, []);
+
+  // IntersectionObserver to auto-track section scroll position
+  useEffect(() => {
+    const trackedSections = [
+      'hero', 'practice', 'advocates', 'cases', 
+      'fee-calculator', 'insights', 'awards', 'chambers', 'faq'
+    ];
+
+    const elements = trackedSections
+      .map(id => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (elements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
+            const id = entry.target.id;
+            setActiveSection(id);
+            setJourneyHistory((prev) => {
+              if (prev[prev.length - 1] === id) return prev;
+              return [...prev.slice(-12), id];
+            });
+          }
+        });
+      },
+      {
+        threshold: [0.2, 0.4],
+        rootMargin: '-80px 0px -40% 0px'
+      }
+    );
+
+    elements.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   // Global Cmd+K / Ctrl+K shortcut listener
   useEffect(() => {
@@ -62,8 +127,24 @@ export default function App() {
       <Header
         onOpenConsultation={() => handleOpenConsultation()}
         onOpenVault={() => setIsVaultOpen(true)}
-        onOpenPortal={() => setIsClientPortalOpen(true)}
+        onOpenPortal={() => {
+          setIsClientPortalOpen(true);
+          setSubItem({
+            type: 'portal',
+            title: 'Secure Client Portal',
+            parentSection: 'portal'
+          });
+        }}
         onOpenSearch={() => setIsSearchOpen(true)}
+      />
+
+      {/* Persistent Global Breadcrumb Navigation & Browsing Journey Tracker */}
+      <GlobalBreadcrumbs
+        activeSection={activeSection}
+        subItem={subItem}
+        journeyHistory={journeyHistory}
+        onNavigateSection={handleNavigateSection}
+        onClearSubItem={() => setSubItem(null)}
       />
 
       {/* Main Page Flow */}
@@ -83,7 +164,21 @@ export default function App() {
         <PracticeAreas
           onOpenConsultation={(practiceTitle) => handleOpenConsultation(practiceTitle)}
           focusedPracticeId={focusedPracticeId}
-          onClearFocusedPractice={() => setFocusedPracticeId(null)}
+          onClearFocusedPractice={() => {
+            setFocusedPracticeId(null);
+            if (subItem?.type === 'practice') setSubItem(null);
+          }}
+          onSelectPractice={(practice) => {
+            if (practice) {
+              setSubItem({
+                type: 'practice',
+                title: practice.title,
+                parentSection: 'practice'
+              });
+            } else if (subItem?.type === 'practice') {
+              setSubItem(null);
+            }
+          }}
         />
 
         {/* Roll of Advocates & Legal Partners */}
@@ -94,6 +189,17 @@ export default function App() {
         {/* Landmark Judicial Precedents & Milestone Transactions */}
         <CaseBriefs
           focusedCaseId={focusedCaseId}
+          onSelectCaseBrief={(brief) => {
+            if (brief) {
+              setSubItem({
+                type: 'case',
+                title: brief.matterName,
+                parentSection: 'cases'
+              });
+            } else if (subItem?.type === 'case') {
+              setSubItem(null);
+            }
+          }}
         />
 
         {/* Advocates Remuneration Order (ARO) Legal Fee & Retainer Calculator */}
@@ -102,7 +208,24 @@ export default function App() {
         />
 
         {/* Kenya Law Review & Legal Insights Articles */}
-        <LegalInsights />
+        <LegalInsights
+          onSelectArticle={(article) => {
+            if (article) {
+              setSubItem({
+                type: 'insight',
+                title: article.title,
+                parentSection: 'insights'
+              });
+            } else if (subItem?.type === 'insight') {
+              setSubItem(null);
+            }
+          }}
+        />
+
+        {/* Prestigious Law Firm Awards, Honors & Accreditations Showcase */}
+        <FirmAwards
+          onOpenConsultation={handleOpenConsultation}
+        />
 
         {/* Upper Hill Nairobi Chambers & Superior Courts Proximity */}
         <NairobiChambers
@@ -142,12 +265,16 @@ export default function App() {
         onClose={() => setIsVaultOpen(false)}
       />
 
-      {/* Dedicated Secure Client Portal Login Modal with Mock Auth Check */}
+      {/* Dedicated Secure Client Portal Login Modal with Biometric WebAuthn & Mock Auth Check */}
       <SecureClientPortalModal
         isOpen={isClientPortalOpen}
-        onClose={() => setIsClientPortalOpen(false)}
+        onClose={() => {
+          setIsClientPortalOpen(false);
+          if (subItem?.type === 'portal') setSubItem(null);
+        }}
         onOpenFullDashboard={(matter) => {
           setIsClientPortalOpen(false);
+          if (subItem?.type === 'portal') setSubItem(null);
           setIsVaultOpen(true);
         }}
       />

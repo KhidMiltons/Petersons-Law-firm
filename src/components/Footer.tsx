@@ -2,6 +2,7 @@ import React from 'react';
 import { FIRM_DETAILS } from '../data/firmData';
 import { Scale, Lock, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { LegalBriefingsNewsletter } from './LegalBriefingsNewsletter';
 
 interface FooterProps {
   onOpenConsultation: () => void;
@@ -15,6 +16,9 @@ export const Footer: React.FC<FooterProps> = ({ onOpenConsultation, onOpenVault 
     <footer className="bg-[#05080E] text-[#8C98AE] border-t border-[#161D2B] pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         
+        {/* Chambers Legal Briefings Monthly Digest Signup */}
+        <LegalBriefingsNewsletter />
+
         {/* Main Footer Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12 border-b border-[#161D2B]">
           
@@ -57,6 +61,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenConsultation, onOpenVault 
               <li><a href="#faq" className="hover:text-white transition-colors">Corporate &amp; Consultations FAQ</a></li>
               <li><a href="#fee-calculator" className="hover:text-white transition-colors">ARO Fee Calculator</a></li>
               <li><a href="#insights" className="hover:text-white transition-colors">Kenya Law Commentary</a></li>
+              <li><a href="#awards" className="hover:text-[#DFBE82] transition-colors">Law Firm Honors &amp; Awards</a></li>
               <li>
                 <button onClick={onOpenVault} className="text-[#C5A880] hover:text-[#DFBE82] transition-colors flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5" />

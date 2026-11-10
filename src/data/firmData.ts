@@ -1164,3 +1164,99 @@ export const FIRM_MILESTONES: FirmMilestone[] = [
   }
 ];
 
+export interface LawFirmAward {
+  id: string;
+  title: string;
+  organization: string;
+  year: string;
+  tier: string;
+  scope: 'Global' | 'Regional (East Africa)' | 'Kenya National' | 'Pan-African';
+  category: string;
+  citation: string;
+  accreditationRef: string;
+  badge: string;
+  categoryGroup: 'global' | 'national' | 'finance';
+}
+
+export const LAW_FIRM_AWARDS: LawFirmAward[] = [
+  {
+    id: "award-chambers-2026",
+    title: "Band 1 - Dispute Resolution & Commercial Litigation",
+    organization: "Chambers & Partners Global",
+    year: "2026",
+    tier: "Band 1 (Highest Distinction)",
+    scope: "Global",
+    category: "Commercial Arbitration & Superior Courts Litigation",
+    citation: "Petersons Angwenyi & Associates maintains an unshakeable reputation for decisive appellate strategy and high-stakes corporate disputes before Kenya's Supreme Court and Court of Appeal.",
+    accreditationRef: "CHAMBERS-GLB-KEN-2026-B1",
+    badge: "Band 1 Ranked",
+    categoryGroup: "global"
+  },
+  {
+    id: "award-legal500-2025",
+    title: "Tier 1 Leading Firm - Commercial, Corporate and M&A",
+    organization: "The Legal 500 Europe, Middle East & Africa (EMEA)",
+    year: "2025/2026",
+    tier: "Tier 1 Top Tier",
+    scope: "Regional (East Africa)",
+    category: "Corporate Finance, Cross-Border Concessions & Sovereign M&A",
+    citation: "A powerhouse practice in Nairobi recognized for pioneering multi-billion shilling energy concessions, syndicated project finance, and regulatory sandbox licensing under the Central Bank of Kenya.",
+    accreditationRef: "L500-EMEA-KEN-2025-T1",
+    badge: "Top Tier 1",
+    categoryGroup: "global"
+  },
+  {
+    id: "award-lsk-2025",
+    title: "Commercial Litigation & Dispute Resolution Law Firm of the Year",
+    organization: "Law Society of Kenya (LSK) Legal Excellence Awards",
+    year: "2025",
+    tier: "Winner / Apex Award",
+    scope: "Kenya National",
+    category: "Constitutional & Commercial Advocacy",
+    citation: "Conferred for exemplary fidelity to the rule of law, institutional integrity under the Advocates Remuneration Order (ARO), and benchmark jurisprudence advancing Kenya's commercial court precedents.",
+    accreditationRef: "LSK-EXC-2025-WINNER-LIT",
+    badge: "Law Firm of the Year",
+    categoryGroup: "national"
+  },
+  {
+    id: "award-iflr1000-2026",
+    title: "Top Tier - Project Development & Banking Finance",
+    organization: "IFLR1000 Financial and Corporate",
+    year: "2026",
+    tier: "Tier 1 Recognized",
+    scope: "Global",
+    category: "Infrastructure PPP, Energy & Sovereign Debt Structuring",
+    citation: "The firm is widely applauded by financial institutions and multilateral lenders for navigating complex concession security agreements, escrow facilities, and cross-border offtake instruments.",
+    accreditationRef: "IFLR-AFR-KEN-2026-T1",
+    badge: "IFLR1000 Tier 1",
+    categoryGroup: "finance"
+  },
+  {
+    id: "award-africanlegal-2025",
+    title: "Commercial Litigation Team of the Year",
+    organization: "African Legal Awards (ALM / Law.com International)",
+    year: "2025",
+    tier: "Winner",
+    scope: "Pan-African",
+    category: "Cross-Border Commercial Dispute Resolution",
+    citation: "Awarded for successful defense in multi-million dollar LCIA and NCIA arbitrations safeguarding regional power transmission grids and East African infrastructural assets.",
+    accreditationRef: "ALA-PANAFR-2025-COMM",
+    badge: "Pan-African Winner",
+    categoryGroup: "national"
+  },
+  {
+    id: "award-ciarb-2025",
+    title: "Exemplary Arbitral Practice & ADR Leadership",
+    organization: "Chartered Institute of Arbitrators (CIArb Kenya)",
+    year: "2025",
+    tier: "Institutional Commendation",
+    scope: "Regional (East Africa)",
+    category: "International Commercial Arbitration (NCIA & LCIA)",
+    citation: "Celebrated for chambers partners' distinguished appointments as Fellows of the Chartered Institute of Arbitrators (FCIArb) and leading arbitral chairs across Eastern Africa.",
+    accreditationRef: "CIARB-KE-2025-HONOR",
+    badge: "FCIArb Accredited",
+    categoryGroup: "finance"
+  }
+];
+
+

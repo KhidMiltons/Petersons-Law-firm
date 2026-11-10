@@ -104,7 +104,13 @@ app.post('/api/meeting-alerts/dispatch', (req, res) => {
 
 async function startServer() {
   const isProd = process.env.NODE_ENV === 'production';
-  const port = Number(process.env.PORT) || 3000;
+  const portArgIndex = process.argv.indexOf('--port');
+  const portArg = portArgIndex !== -1 ? Number(process.argv[portArgIndex + 1]) : undefined;
+  const port = Number(process.env.PORT) || portArg || 3000;
+
+  const hostArgIndex = process.argv.indexOf('--host');
+  const hostArg = hostArgIndex !== -1 ? process.argv[hostArgIndex + 1] : undefined;
+  const host = process.env.HOST || hostArg || '0.0.0.0';
 
   if (!isProd) {
     const vite = await createViteServer({
@@ -122,8 +128,8 @@ async function startServer() {
     });
   }
 
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`Petersons Angwenyi & Associates server listening on http://0.0.0.0:${port}`);
+  app.listen(port, host, () => {
+    console.log(`Petersons Angwenyi & Associates server listening on http://${host}:${port}`);
   });
 }
 

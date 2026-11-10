@@ -11,7 +11,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenConsultation, on
   const { t } = useLanguage();
 
   return (
-    <section className="relative min-h-[92vh] flex flex-col justify-between pt-36 sm:pt-40 pb-12 overflow-hidden bg-[#080B11]">
+    <section id="hero" className="relative min-h-[92vh] flex flex-col justify-between pt-36 sm:pt-40 pb-12 overflow-hidden bg-[#080B11]">
       {/* Background Hero Image with Measured Gradient Scrim */}
       <div className="absolute inset-0 z-0">
         <img
