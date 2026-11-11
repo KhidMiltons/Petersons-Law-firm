@@ -61,6 +61,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenConsultation, onOpenVault 
               <li><a href="#faq" className="hover:text-white transition-colors">Corporate &amp; Consultations FAQ</a></li>
               <li><a href="#fee-calculator" className="hover:text-white transition-colors">ARO Fee Calculator</a></li>
               <li><a href="#insights" className="hover:text-white transition-colors">Kenya Law Commentary</a></li>
+              <li><a href="#east-africa-reach" className="hover:text-[#DFBE82] transition-colors">East Africa Regional Reach</a></li>
               <li><a href="#awards" className="hover:text-[#DFBE82] transition-colors">Law Firm Honors &amp; Awards</a></li>
               <li>
                 <button onClick={onOpenVault} className="text-[#C5A880] hover:text-[#DFBE82] transition-colors flex items-center gap-1.5">

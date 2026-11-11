@@ -202,8 +202,8 @@ export const GlobalTimeClock: React.FC<{
   // Default: 'header-bar' (Hairline top strip)
   return (
     <>
-      <div className="border-b border-[#17202F] bg-[#06090E]/95 backdrop-blur-md px-6 lg:px-8 py-1.5 text-[11px] font-mono tracking-wider text-[#8C98AE]">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div className="border-b border-[#17202F] bg-[#06090E]/95 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-1.5 text-[11px] font-mono tracking-wider text-[#8C98AE] w-full max-w-full overflow-x-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 w-full overflow-x-hidden">
           
           {/* Left: Global Hubs Live Clocks */}
           <button

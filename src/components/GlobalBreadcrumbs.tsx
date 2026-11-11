@@ -33,6 +33,7 @@ const SECTION_CONFIG: Record<string, { en: string; sw: string; icon: string; has
   cases: { en: 'Landmark Precedents', sw: 'Maamuzi ya Mahakama', icon: 'FileText', hash: '#cases' },
   'fee-calculator': { en: 'ARO Fee Calculator', sw: 'Kikokotoo cha Ada', icon: 'Calculator', hash: '#fee-calculator' },
   insights: { en: 'Legal Insights & Review', sw: 'Uchambuzi wa Sheria', icon: 'BookOpen', hash: '#insights' },
+  'east-africa-reach': { en: 'East Africa Reach', sw: 'Ufikiaji wa Afrika Mashariki', icon: 'Compass', hash: '#east-africa-reach' },
   awards: { en: 'Honors & Accreditations', sw: 'Tuzo na Heshima', icon: 'Trophy', hash: '#awards' },
   chambers: { en: 'Nairobi Chambers & Courts', sw: 'Ofisi za Nairobi', icon: 'Building2', hash: '#chambers' },
   faq: { en: 'Statutory FAQ', sw: 'Maswali ya Kisheria', icon: 'FileText', hash: '#faq' },

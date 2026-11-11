@@ -1,8 +1,9 @@
 import { CaseBrief, LegalArticle, LawFirmAward } from '../data/firmData';
+import { RegionalLocation } from '../data/eastAfricaData';
 
 export interface PrintDocumentMetadata {
   docRef: string;
-  docType: 'Judicial Precedent Briefing' | 'Law Review & Regulatory Insight' | 'Law Firm Honors & Accreditations';
+  docType: 'Judicial Precedent Briefing' | 'Law Review & Regulatory Insight' | 'Law Firm Honors & Accreditations' | 'East Africa Cross-Border Advisory Dossier';
   title: string;
   subtitle: string;
   dateGenerated: string;
@@ -333,6 +334,64 @@ export function formatAwardsCompendiumForPrint(awards: LawFirmAward[]): PrintDoc
       'Law Society of Kenya Act 2014',
       'Arbitration Act 1995 (Cap 49, Laws of Kenya)',
       'Evidence Act (Cap 80, Laws of Kenya)'
+    ],
+    firmDetails: {
+      name: 'Petersons Angwenyi & Associates Advocates',
+      chambers: 'Upper Hill Chambers, 8th Floor, Mara Road, Nairobi',
+      address: 'P.O. Box 48920-00100 GPO, Nairobi, Republic of Kenya',
+      telephone: '+254 (0) 20 271 8840 / +254 (0) 722 000 000',
+      email: 'litigation@paalawkenya.com',
+      rollNumber: 'Senior Counsel Milton Angwenyi (Roll: P.105/7412/95)',
+      lskRef: 'LSK Firm Certificate No. PAA-1998-NRB'
+    }
+  };
+}
+
+export function formatEastAfricaReachForPrint(locations: RegionalLocation[]): PrintDocument {
+  const currentDate = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  return {
+    meta: {
+      docRef: 'PAA/EAC/2026/REG-REACH',
+      docType: 'East Africa Cross-Border Advisory Dossier',
+      title: 'East African Cross-Border Advisory & Sovereign Project Concessions',
+      subtitle: 'Regional Jurisdictional Footprint · EAC & COMESA Corridors',
+      dateGenerated: currentDate,
+      category: 'Cross-Border Advisory & Regional Chambers',
+      jurisdiction: 'East African Community (EAC) & COMESA Member States',
+      citation: 'PAA Regional Practice Compendium (2026 Edition)'
+    },
+    sections: [
+      {
+        heading: '1. EXECUTIVE SUMMARY & REGIONAL JURISDICTION',
+        content: [
+          'With principal headquarters at Upper Hill Nairobi and specialized regional circuits in Mombasa and Kisumu, Petersons Angwenyi & Associates Advocates maintains an apex cross-border practice covering Kenya, Uganda, Tanzania, Rwanda, Burundi, South Sudan, Ethiopia, and the Democratic Republic of Congo.',
+          'Advocates of the firm represent sovereign ministries, multinational corporations, commercial banking syndicates, and concessionaires before the East African Court of Justice (EACJ, Arusha), the COMESA Court of Justice, the Nairobi Centre for International Arbitration (NCIA), and international arbitral tribunals in London and Dubai.'
+        ]
+      },
+      {
+        heading: '2. REGIONAL OFFICES & STRATEGIC PROJECT HUBS',
+        content: locations.map(loc => 
+          `• ${loc.name.toUpperCase()} (${loc.country}): ${loc.title}\n  Scope: ${loc.description}\n  Exposure / Value: ${loc.valueKes} (${loc.valueUsd}) | Status: ${loc.status}\n  Governing Forum: ${loc.tribunalOrForum}\n  Lead Counsel: ${loc.leadCounsel}`
+        )
+      },
+      {
+        heading: '3. CORE STATUTORY CODES & MULTILATERAL TREATIES',
+        content: [
+          'All cross-border transactional advisory, sovereign guarantees, and trans-boundary disputes are governed under the Treaty for the Establishment of the East African Community (EAC), the COMESA Treaty, the New York Convention on the Recognition and Enforcement of Foreign Arbitral Awards (1958), and Kenya\'s Advocates Remuneration Order.'
+        ]
+      }
+    ],
+    statutoryBasis: [
+      'Treaty for the Establishment of the East African Community (EAC)',
+      'COMESA Treaty & Common Market Protocols',
+      'New York Convention on the Recognition and Enforcement of Foreign Arbitral Awards (1958)',
+      'Kenya Evidence Act (Cap 80) § 134 (Advocate-Client Privilege)',
+      'Advocates Act (Cap 16, Laws of Kenya)'
     ],
     firmDetails: {
       name: 'Petersons Angwenyi & Associates Advocates',

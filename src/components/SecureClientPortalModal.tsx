@@ -5,13 +5,20 @@ import {
   Check, AlertCircle, RefreshCw, Sparkles, Filter, Search, 
   LogOut, Scale, ChevronRight, PenTool, Highlighter, ScanText,
   Bell, BellRing, Calendar, CalendarClock, Activity, Layers,
-  CheckCheck, Landmark, AlertTriangle, ExternalLink, ArrowUpRight
+  CheckCheck, Landmark, AlertTriangle, ExternalLink, ArrowUpRight,
+  Key, Cpu, Usb, ScanFace, Trash2, Plus, Shield
 } from 'lucide-react';
 import { MOCK_CLIENT_MATTERS, ClientMatter, MatterDocument, MatterChronologyStep } from '../data/firmData';
 import { useLanguage } from '../context/LanguageContext';
 import { DocumentPreviewModal } from './DocumentPreviewModal';
 import { BiometricVerificationModal } from './BiometricVerificationModal';
 import { SecureDocumentAnnotationModal } from './SecureDocumentAnnotationModal';
+import { WebAuthnRegistrationModal } from './WebAuthnRegistrationModal';
+import { 
+  WebAuthnPasskey, 
+  getRegisteredPasskeys, 
+  deleteRegisteredPasskey 
+} from '../types/webauthn';
 
 interface SecureClientPortalModalProps {
   isOpen: boolean;
@@ -127,9 +134,11 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
 }) => {
   const { t } = useLanguage();
 
-  // Authentication State
+  // Authentication & WebAuthn Biometric State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isBiometricModalOpen, setIsBiometricModalOpen] = useState<boolean>(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState<boolean>(false);
+  const [registeredPasskeys, setRegisteredPasskeys] = useState<WebAuthnPasskey[]>(() => getRegisteredPasskeys());
   const [email, setEmail] = useState<string>(DEMO_ACCOUNTS[0].email);
   const [password, setPassword] = useState<string>(DEMO_ACCOUNTS[0].password);
   const [code2FA, setCode2FA] = useState<string>(DEMO_ACCOUNTS[0].code2FA);
@@ -142,8 +151,16 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
     return DEMO_ACCOUNTS.find(a => a.id === selectedDemoId) || DEMO_ACCOUNTS[0];
   }, [selectedDemoId]);
 
-  // Portal Navigation Tabs: 'documents' | 'timeline' | 'notifications'
-  const [activeTab, setActiveTab] = useState<'documents' | 'timeline' | 'notifications'>('documents');
+  // Enrolled passkeys for the selected officer
+  const activeOfficerPasskeys = useMemo(() => {
+    return registeredPasskeys.filter(
+      k => k.userEmail.toLowerCase() === activeDemoAccount.email.toLowerCase() ||
+           k.officerName.toLowerCase() === activeDemoAccount.officer.toLowerCase()
+    );
+  }, [registeredPasskeys, activeDemoAccount]);
+
+  // Portal Navigation Tabs: 'documents' | 'timeline' | 'notifications' | 'security'
+  const [activeTab, setActiveTab] = useState<'documents' | 'timeline' | 'notifications' | 'security'>('documents');
 
   // Selected Matter & Documents State
   const [activeMatter, setActiveMatter] = useState<ClientMatter>(() => {
@@ -399,7 +416,7 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
               </div>
 
               {/* Dedicated High-Security Biometric Passkey Gate (Web Authentication API) */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-[#152033] via-[#10192A] to-[#152033] border border-[#C5A880]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-[#C5A880]/5">
+              <div className="p-4 rounded-xl bg-gradient-to-r from-[#152033] via-[#10192A] to-[#152033] border border-[#C5A880]/50 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg shadow-[#C5A880]/5">
                 <div className="flex items-center gap-3.5">
                   <div className="w-11 h-11 rounded-xl bg-[#C5A880]/15 border border-[#C5A880]/40 flex items-center justify-center text-[#DFBE82] shrink-0">
                     <Fingerprint className="w-6 h-6 text-[#C5A880] animate-pulse" />
@@ -412,25 +429,49 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
                       </span>
                       <span>·</span>
                       <span className="text-emerald-400">KICA § 83B Passkey</span>
+                      {activeOfficerPasskeys.length > 0 && (
+                        <>
+                          <span>·</span>
+                          <span className="text-emerald-300 font-bold bg-emerald-950/80 px-1.5 py-0.2 rounded border border-emerald-500/40">
+                            {activeOfficerPasskeys.length} Key Enrolled
+                          </span>
+                        </>
+                      )}
                     </div>
                     <span className="font-semibold text-white block text-sm">
-                      Corporate Biometric Verification Enclave
+                      {activeOfficerPasskeys.length > 0 
+                        ? `Enrolled Passkey: ${activeOfficerPasskeys[0].nickname}`
+                        : 'Corporate Biometric Verification Enclave'}
                     </span>
                     <span className="text-[#9BA9BE] text-xs block">
-                      High-security hardware authentication via Touch ID, Face ID, Windows Hello, or FIDO2 Security Token.
+                      {activeOfficerPasskeys.length > 0
+                        ? `1-Tap sign-in with ${activeOfficerPasskeys[0].deviceType === 'fingerprint' ? 'Fingerprint (Touch ID)' : activeOfficerPasskeys[0].deviceType === 'faceid' ? 'Facial Recognition' : 'FIDO2 Security Key'}.`
+                        : 'High-security hardware authentication via Touch ID, Face ID, Windows Hello, or FIDO2 Security Token.'}
                     </span>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleBiometricAuth}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C5A880] to-[#E4C999] hover:brightness-110 text-[#0A0E17] font-bold text-xs uppercase tracking-wider transition-all shadow-md shrink-0 group"
-                  title="Authenticate instantly using hardware biometric enclave"
-                >
-                  <Fingerprint className="w-4 h-4 text-[#0A0E17] group-hover:scale-110 transition-transform" />
-                  <span>Verify with Biometrics</span>
-                </button>
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setIsRegisterModalOpen(true)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#121927] hover:bg-[#1A2538] text-[#C5A880] hover:text-white border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold transition-all shadow-sm group"
+                    title="Enroll a new hardware biometric key (Touch ID, Windows Hello, YubiKey) using WebAuthn API"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#C5A880] group-hover:scale-110 transition-transform" />
+                    <span>Register Key</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleBiometricAuth}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C5A880] to-[#E4C999] hover:brightness-110 text-[#0A0E17] font-bold text-xs uppercase tracking-wider transition-all shadow-md group"
+                    title="Authenticate instantly using hardware biometric enclave"
+                  >
+                    <Fingerprint className="w-4 h-4 text-[#0A0E17] group-hover:scale-110 transition-transform" />
+                    <span>{activeOfficerPasskeys.length > 0 ? 'Sign In with Passkey' : 'Verify with Biometrics'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Quick-Fill Demo Accounts */}
@@ -545,15 +586,27 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
 
                 {/* Actions Row */}
                 <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={handleBiometricAuth}
-                    disabled={isVerifying}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#141C2B] hover:bg-[#1D273A] border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold text-[#DFBE82] transition-all disabled:opacity-50 group shadow-sm"
-                  >
-                    <Fingerprint className="w-4 h-4 text-[#C5A880] group-hover:scale-110 transition-transform" />
-                    <span>Biometric Verification (WebAuthn)</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={handleBiometricAuth}
+                      disabled={isVerifying}
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#141C2B] hover:bg-[#1D273A] border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold text-[#DFBE82] transition-all disabled:opacity-50 group shadow-sm"
+                    >
+                      <Fingerprint className="w-4 h-4 text-[#C5A880] group-hover:scale-110 transition-transform" />
+                      <span>Biometric Passkey Sign-In</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsRegisterModalOpen(true)}
+                      disabled={isVerifying}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#111724] hover:bg-[#182235] border border-[#232F46] hover:border-[#C5A880]/60 text-xs font-medium text-[#A6B4CD] hover:text-white transition-all"
+                      title="Enroll a new hardware security key or biometric sensor"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-[#C5A880]" />
+                      <span>Register Key</span>
+                    </button>
+                  </div>
 
                   <button
                     type="submit"
@@ -691,6 +744,24 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
                         {unreadCount} NEW
                       </span>
                     )}
+                  </button>
+
+                  {/* Tab 4: Biometric Passkeys (WebAuthn / FIDO2) */}
+                  <button
+                    onClick={() => setActiveTab('security')}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
+                      activeTab === 'security'
+                        ? 'bg-[#C5A880] text-[#0A0E17] font-bold shadow-md shadow-[#C5A880]/15'
+                        : 'bg-[#111724] text-[#A6B4CD] hover:text-white border border-[#1E2A3E]'
+                    }`}
+                  >
+                    <Key className="w-4 h-4" />
+                    <span>Biometric Passkeys</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                      activeTab === 'security' ? 'bg-[#0A0E17] text-[#E4C999] font-bold' : 'bg-[#182338] text-[#8C98AE]'
+                    }`}>
+                      {activeOfficerPasskeys.length}
+                    </span>
                   </button>
                 </div>
 
@@ -1164,6 +1235,243 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
                 </div>
               )}
 
+              {/* TAB 4: BIOMETRIC PASSKEYS & FIDO2 HARDWARE MANAGEMENT */}
+              {activeTab === 'security' && (
+                <div className="space-y-6">
+                  {/* Security Overview & Action Header */}
+                  <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#111726] via-[#141C2E] to-[#111726] border border-[#233149] shadow-xl">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#C5A880]/15 border border-[#C5A880]/30 text-[11px] font-mono font-semibold text-[#DFBE82]">
+                            FIDO2 · WebAuthn Level 3
+                          </span>
+                          <span className="text-xs text-emerald-400 font-mono flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Hardware TPM / Secure Enclave Enforced
+                          </span>
+                        </div>
+                        <h4 className="text-lg font-cinzel text-white font-bold tracking-wide">
+                          Biometric Hardware Keys &amp; Officer Passkeys
+                        </h4>
+                        <p className="text-xs text-[#A6B4CD] max-w-2xl leading-relaxed">
+                          Cryptographic asymmetric credentials bound directly to physical biometric hardware sensors (Touch ID, Windows Hello, YubiKey 5 FIDO2). Registered under the Kenya Information and Communications Act (KICA) § 83B for Advanced Electronic Signature compliance.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => setIsRegisterModalOpen(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C5A880] to-[#DFBE82] text-[#0A0E17] font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg shadow-[#C5A880]/20 transition-all shrink-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Enroll New Passkey</span>
+                      </button>
+                    </div>
+
+                    {/* Officer Enclave Status Strip */}
+                    <div className="mt-5 pt-4 border-t border-[#1F2C44] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div className="bg-[#0B101A] p-2.5 rounded-xl border border-[#1A2538]">
+                        <span className="text-[10px] uppercase font-mono text-[#7D8B9F] block">Resident Officer</span>
+                        <span className="font-semibold text-white truncate block">{activeDemoAccount.officer}</span>
+                      </div>
+                      <div className="bg-[#0B101A] p-2.5 rounded-xl border border-[#1A2538]">
+                        <span className="text-[10px] uppercase font-mono text-[#7D8B9F] block">Client Entity</span>
+                        <span className="font-semibold text-[#DFBE82] truncate block">{activeDemoAccount.entity}</span>
+                      </div>
+                      <div className="bg-[#0B101A] p-2.5 rounded-xl border border-[#1A2538]">
+                        <span className="text-[10px] uppercase font-mono text-[#7D8B9F] block">Enrolled Keys</span>
+                        <span className="font-semibold text-emerald-400 font-mono block">
+                          {activeOfficerPasskeys.length} Hardware {activeOfficerPasskeys.length === 1 ? 'Key' : 'Keys'}
+                        </span>
+                      </div>
+                      <div className="bg-[#0B101A] p-2.5 rounded-xl border border-[#1A2538]">
+                        <span className="text-[10px] uppercase font-mono text-[#7D8B9F] block">Attestation Standard</span>
+                        <span className="font-semibold text-[#DFBE82] font-mono block">Direct FIDO2 / W3C</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Registered Keys Grid */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs uppercase font-mono tracking-wider text-[#A6B4CD] flex items-center gap-2">
+                        <Key className="w-4 h-4 text-[#C5A880]" />
+                        <span>Active Hardware Credentials for {activeDemoAccount.officer}</span>
+                      </h5>
+                      <span className="text-[11px] font-mono text-[#7D8B9F]">
+                        {activeOfficerPasskeys.length} of {registeredPasskeys.length} System Keys
+                      </span>
+                    </div>
+
+                    {activeOfficerPasskeys.length === 0 ? (
+                      <div className="p-8 rounded-2xl bg-[#0D131F] border border-[#212D42] text-center space-y-3">
+                        <div className="w-12 h-12 mx-auto rounded-2xl bg-[#141C2B] border border-[#C5A880]/30 flex items-center justify-center text-[#C5A880]">
+                          <Key className="w-6 h-6" />
+                        </div>
+                        <h5 className="text-sm font-semibold text-white">No Hardware Passkeys Currently Enrolled</h5>
+                        <p className="text-xs text-[#8C98AE] max-w-md mx-auto">
+                          Enrolling a Touch ID, Windows Hello, or YubiKey passkey enables high-security biometric sign-ins without entering SMS tokens or passwords.
+                        </p>
+                        <button
+                          onClick={() => setIsRegisterModalOpen(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C5A880] text-[#0A0E17] font-bold text-xs hover:brightness-110 transition-all"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Enroll Passkey Now</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {activeOfficerPasskeys.map((passkey) => {
+                          const isPlatform = passkey.authenticatorAttachment === 'platform';
+                          const isUsb = passkey.deviceType === 'hardware_key';
+                          const isFace = passkey.deviceType === 'faceid';
+
+                          return (
+                            <div
+                              key={passkey.id}
+                              className="p-4 sm:p-5 rounded-2xl bg-[#0D1422] border border-[#1E2C44] hover:border-[#C5A880]/50 transition-all space-y-4 flex flex-col justify-between group shadow-md"
+                            >
+                              <div className="space-y-3">
+                                {/* Header Row */}
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${
+                                      isFace
+                                        ? 'bg-sky-950/40 border-sky-600/40 text-sky-400'
+                                        : isUsb
+                                        ? 'bg-amber-950/40 border-amber-600/40 text-[#DFBE82]'
+                                        : 'bg-emerald-950/40 border-emerald-600/40 text-emerald-400'
+                                    }`}>
+                                      {isFace ? (
+                                        <ScanFace className="w-6 h-6" />
+                                      ) : isUsb ? (
+                                        <Usb className="w-6 h-6" />
+                                      ) : (
+                                        <Fingerprint className="w-6 h-6" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <h6 className="text-sm font-semibold text-white group-hover:text-[#DFBE82] transition-colors">
+                                        {passkey.nickname}
+                                      </h6>
+                                      <span className="text-[11px] font-mono text-[#8C98AE] flex items-center gap-1.5">
+                                        <span>{passkey.officerName}</span>
+                                        <span>·</span>
+                                        <span className="text-[#C5A880]">{passkey.clientEntity}</span>
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase font-semibold shrink-0 border ${
+                                    isPlatform
+                                      ? 'bg-emerald-950/50 border-emerald-700/50 text-emerald-300'
+                                      : 'bg-indigo-950/50 border-indigo-700/50 text-indigo-300'
+                                  }`}>
+                                    {isPlatform ? 'Platform Biometric' : 'Roaming Security Key'}
+                                  </span>
+                                </div>
+
+                                {/* Passkey Hardware Parameters */}
+                                <div className="p-3 bg-[#090E17] rounded-xl border border-[#162133] space-y-1.5 text-xs font-mono">
+                                  <div className="flex items-center justify-between text-[#8C98AE]">
+                                    <span className="text-[10px] uppercase">Credential ID:</span>
+                                    <span className="text-white text-[11px]">
+                                      {passkey.id.slice(0, 14)}...{passkey.id.slice(-8)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[#8C98AE]">
+                                    <span className="text-[10px] uppercase">Algorithm:</span>
+                                    <span className="text-[#DFBE82] text-[11px] font-semibold">
+                                      {passkey.algorithm}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[#8C98AE]">
+                                    <span className="text-[10px] uppercase">Enclave AAGUID:</span>
+                                    <span className="text-[#A6B4CD] text-[10px]">
+                                      {passkey.aaguid}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[#8C98AE]">
+                                    <span className="text-[10px] uppercase">Compliance:</span>
+                                    <span className="text-emerald-400 text-[10px] flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      <span>KICA § 83B Advanced e-Signature</span>
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between text-[11px] text-[#7D8B9F] font-mono px-1">
+                                  <span>Enrolled: {new Date(passkey.createdAt).toLocaleDateString()}</span>
+                                  <span>Last Used: {passkey.lastUsedAt ? new Date(passkey.lastUsedAt).toLocaleDateString() : 'Active Session'}</span>
+                                </div>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="pt-2 border-t border-[#1A2538] flex items-center justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsBiometricModalOpen(true);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#141C2B] hover:bg-[#1D273A] border border-[#C5A880]/30 hover:border-[#C5A880] text-xs font-medium text-[#DFBE82] transition-all"
+                                >
+                                  <Fingerprint className="w-3.5 h-3.5 text-[#C5A880]" />
+                                  <span>Test Verification</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (window.confirm(`Are you sure you want to revoke "${passkey.nickname}"? This action cannot be undone.`)) {
+                                      deleteRegisteredPasskey(passkey.id);
+                                      setRegisteredPasskeys(getRegisteredPasskeys());
+                                      setDownloadNotice(`Passkey "${passkey.nickname}" has been cryptographically revoked.`);
+                                      setTimeout(() => setDownloadNotice(null), 4000);
+                                    }
+                                  }}
+                                  className="p-2 rounded-xl bg-[#141C2B] hover:bg-red-950/40 border border-[#232F46] hover:border-red-600/50 text-[#8C98AE] hover:text-red-400 transition-all"
+                                  title="Revoke passkey"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Technical & Legal Framework Advisory */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-[#090D16] border border-[#1E2A3E] space-y-2.5 text-xs text-[#8C98AE]">
+                    <div className="flex items-center gap-2 text-[#DFBE82] font-semibold">
+                      <Shield className="w-4 h-4 text-[#C5A880]" />
+                      <span>Zero-Knowledge Hardware Enclave Architecture &amp; Legal Admissibility</span>
+                    </div>
+                    <p className="leading-relaxed text-[11px]">
+                      Under the <strong>Kenya Information and Communications Act (Cap 411A § 83B)</strong> and <strong>Evidence Act (Cap 80 § 106B)</strong>, cryptographic asymmetric keys generated inside biometric hardware secure enclaves are legally admissible as Advanced Electronic Signatures. Biometric telemetry (fingerprint minutiae, facial depth maps) never leaves the physical silicon; authentication occurs strictly via public-key challenge-response signatures.
+                    </p>
+                    <div className="pt-2 flex flex-wrap items-center gap-3 text-[10px] font-mono text-[#7D8B9F]">
+                      <span className="flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span>FIDO Alliance Level 3 Certified</span>
+                      </span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span>Apple Secure Enclave / Windows TPM 2.0</span>
+                      </span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span>Yubico FIDO2 / CTAP2 Compliant</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
 
@@ -1209,7 +1517,7 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
         />
       )}
 
-      {/* High-Security Biometric Verification Simulation Modal (Web Authentication API) */}
+      {/* High-Security Biometric Verification Modal (Web Authentication API) */}
       <BiometricVerificationModal
         isOpen={isBiometricModalOpen}
         onClose={() => setIsBiometricModalOpen(false)}
@@ -1218,6 +1526,23 @@ export const SecureClientPortalModal: React.FC<SecureClientPortalModalProps> = (
         officerName={activeDemoAccount.officer}
         officerRole={activeDemoAccount.role}
         docketRef={activeDemoAccount.docket}
+      />
+
+      {/* High-Security WebAuthn Biometric Registration Modal (FIDO2 / KICA § 83B) */}
+      <WebAuthnRegistrationModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onSuccess={(newKey) => {
+          setRegisteredPasskeys(getRegisteredPasskeys());
+          setDownloadNotice(`Hardware passkey "${newKey.nickname}" successfully enrolled under KICA § 83B.`);
+          setTimeout(() => setDownloadNotice(null), 5000);
+          if (!isAuthenticated) {
+            handleBiometricSuccess();
+          }
+        }}
+        officerName={activeDemoAccount.officer}
+        officerEmail={activeDemoAccount.email}
+        clientEntity={activeDemoAccount.entity}
       />
     </>
   );

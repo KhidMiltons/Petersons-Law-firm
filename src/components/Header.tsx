@@ -18,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { language, setLanguage, t } = useLanguage();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [langToast, setLangToast] = useState<string | null>(null);
@@ -26,8 +27,18 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
+
+      // Track scroll progress through the entire long-form page content
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      if (height > 0) {
+        const scrolled = (winScroll / height) * 100;
+        setScrollProgress(Math.min(100, Math.max(0, scrolled)));
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -57,7 +68,27 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 transition-all duration-300">
+    <header className="fixed top-0 left-0 right-0 z-40 w-full max-w-full overflow-x-hidden transition-all duration-300">
+      {/* Slim Gold Scroll Progress Indicator (Long-Form Content Reading Tracker) */}
+      <div 
+        className="w-full h-[2.5px] sm:h-[3px] bg-[#0A0E17]/80 overflow-hidden relative"
+        role="progressbar"
+        aria-valuenow={Math.round(scrollProgress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Reading and scroll progress indicator"
+      >
+        <div
+          className="h-full bg-gradient-to-r from-[#B38F5B] via-[#C5A880] to-[#F3E3C3] shadow-[0_0_10px_rgba(197,168,128,0.85)] transition-all duration-75 ease-out relative"
+          style={{ width: `${scrollProgress}%` }}
+        >
+          {/* Subtle luminous gold pip at the leading edge */}
+          {scrollProgress > 0 && (
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#FFF8E7] shadow-[0_0_8px_#C5A880] ring-1 ring-[#C5A880]/50" />
+          )}
+        </div>
+      </div>
+
       {/* Small, Elegant Global Time Clock Component (Nairobi HQ, London, New York) */}
       <GlobalTimeClock
         variant="header-bar"
@@ -72,6 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => setLangToast(null)}
             className="text-[#728299] hover:text-white p-0.5"
+            aria-label="Dismiss language notification"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -80,107 +112,95 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Main Top Navigation Bar */}
       <div
-        className={`transition-all duration-300 ${
+        className={`w-full max-w-full overflow-x-hidden transition-all duration-300 ${
           isScrolled
-            ? 'bg-[#080B11]/95 backdrop-blur-md border-b border-[#1A2334] py-3 shadow-xl'
-            : 'bg-[#080B11]/85 backdrop-blur-sm border-b border-[#1A2334]/50 py-4'
+            ? 'bg-[#080B11]/95 backdrop-blur-md border-b border-[#1A2334] py-2.5 sm:py-3 shadow-xl'
+            : 'bg-[#080B11]/90 backdrop-blur-sm border-b border-[#1A2334]/60 py-3 sm:py-3.5'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          {/* Strict 3-Zone Navigation Row */}
-          <div className="flex items-center justify-between gap-6 xl:gap-8">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Clean 3-Part Flexbox Navigation Row: Left (Brand), Center (Nav Links), Right (Action Buttons) */}
+          <div className="flex items-center justify-between gap-3 sm:gap-4 xl:gap-6 w-full">
           
-            {/* Zone 1: Single Brand Wordmark Element in Display Font */}
+            {/* PART 1 (LEFT): Brand Wordmark Element with Heraldic Seal */}
             <a
               href="#"
-              className="font-cinzel text-base sm:text-lg md:text-xl font-bold tracking-wider text-white whitespace-nowrap shrink-0 hover:text-[#DFBE82] transition-colors flex items-center gap-2.5"
+              className="font-cinzel text-sm sm:text-base xl:text-lg font-bold tracking-wider text-white whitespace-nowrap shrink-0 hover:text-[#DFBE82] transition-colors flex items-center gap-2 sm:gap-2.5 group"
             >
               {/* Subtle heraldic crest seal */}
-              <span className="w-7 h-7 rounded-md border border-[#C5A880]/50 bg-[#C5A880]/10 flex items-center justify-center text-[#C5A880] text-xs font-serif font-bold">
+              <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-md border border-[#C5A880]/50 bg-[#C5A880]/10 flex items-center justify-center text-[#C5A880] text-[11px] sm:text-xs font-serif font-bold shrink-0 group-hover:border-[#C5A880] transition-colors">
                 P
               </span>
-              <span>PETERSONS ANGWENYI &amp; ASSOCIATES</span>
+              <span className="whitespace-nowrap tracking-wide">
+                PETERSONS ANGWENYI &amp; ASSOCIATES
+              </span>
             </a>
 
-            {/* Zone 2: Navigation Links with Secure File Sharing */}
-            <nav className="hidden lg:flex items-center gap-5 xl:gap-6 text-xs uppercase tracking-widest font-medium text-[#A6B2C4]">
+            {/* PART 2 (CENTER): 6 Navigation Links (Cleanly collapses below xl / 1280px into hamburger drawer) */}
+            <nav
+              className="hidden xl:flex items-center gap-3.5 2xl:gap-5 text-[11px] 2xl:text-xs uppercase tracking-wider font-medium text-[#A6B2C4] whitespace-nowrap shrink-0"
+              aria-label="Primary Navigation"
+            >
               <a
                 href="#practice"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0"
+                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
               >
                 {t('nav.practice')}
               </a>
               <a
                 href="#advocates"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0"
+                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
               >
                 {t('nav.advocates')}
               </a>
               <a
                 href="#cases"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0"
+                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
               >
                 {t('nav.cases')}
               </a>
               <a
                 href="#fee-calculator"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0"
+                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
               >
                 {t('nav.feeCalculator')}
               </a>
               <a
                 href="#insights"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0"
+                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
               >
                 {t('nav.insights')}
               </a>
               <a
                 href="#awards"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0"
+                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
               >
                 {t('nav.awards')}
               </a>
-              <button
-                onClick={onOpenPortal || onOpenVault}
-                className="text-[#E4C999] hover:text-white transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer font-medium px-2.5 py-1 rounded-lg bg-[#121927] hover:bg-[#182338] border border-[#C5A880]/30 hover:border-[#C5A880]/60 shadow-sm relative group"
-                title="Secure Client Portal Login (3 New Case Updates & Document Alerts)"
-              >
-                <Lock className="w-3.5 h-3.5 text-[#C5A880]" />
-                <span>{t('nav.clientPortal')}</span>
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-0.5" />
-              </button>
-              <button
-                onClick={onOpenVault}
-                className="text-[#8C98AE] hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer font-medium"
-                title={t('nav.secureFiles')}
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880]" />
-                <span>{t('nav.secureFiles')}</span>
-              </button>
             </nav>
 
-            {/* Zone 3: Search ⌘K + Language Switcher + 1 Primary Action */}
-            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* PART 3 (RIGHT): Action Buttons & Essential Utilities */}
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap">
               {/* Search Index Trigger Button (⌘K) */}
               <button
                 onClick={onOpenSearch}
-                className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-xs text-[#8C98AE] hover:text-white transition-all group cursor-pointer whitespace-nowrap shrink-0"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-xs text-[#8C98AE] hover:text-white transition-all group cursor-pointer whitespace-nowrap shrink-0"
                 title="Search Chambers Index (⌘K / Ctrl+K)"
                 aria-label="Search Chambers Index"
               >
                 <Search className="w-3.5 h-3.5 text-[#C5A880] group-hover:scale-110 transition-transform" />
-                <span className="hidden md:inline font-sans text-xs font-medium">{t('search.triggerLabel')}</span>
-                <kbd className="hidden lg:inline-flex items-center text-[10px] font-mono px-1.5 py-0.2 bg-[#1A2334] text-[#A6B2C4] rounded border border-[#2D3B54]">
+                <span className="hidden 2xl:inline font-sans text-xs font-medium">{t('search.triggerLabel')}</span>
+                <kbd className="inline-flex items-center text-[10px] font-mono px-1.5 py-0.2 bg-[#1A2334] text-[#A6B2C4] rounded border border-[#2D3B54]">
                   ⌘K
                 </kbd>
               </button>
 
-              {/* Language Switcher Component with Dropdown & Segmented Controls */}
-              <div className="relative flex items-center" ref={langMenuRef}>
+              {/* Language Switcher Component with Segmented Controls & Dropdown */}
+              <div className="relative flex items-center shrink-0" ref={langMenuRef}>
                 <div className="flex items-center p-0.5 bg-[#121824] rounded-lg border border-[#222B3D] text-[11px] font-mono shadow-inner">
                   <button
                     onClick={() => handleSwitchLanguage('en')}
-                    className={`px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 ${
+                    className={`px-1.5 sm:px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 ${
                       language === 'en'
                         ? 'bg-[#C5A880] text-[#0A0E17] shadow-sm font-bold'
                         : 'text-[#8C98AE] hover:text-white'
@@ -193,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                   <button
                     onClick={() => handleSwitchLanguage('sw')}
-                    className={`px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 ${
+                    className={`px-1.5 sm:px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 ${
                       language === 'sw'
                         ? 'bg-[#C5A880] text-[#0A0E17] shadow-sm font-bold'
                         : 'text-[#8C98AE] hover:text-white'
@@ -265,41 +285,50 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
 
-              {/* Secure Client Portal Quick Access Button with Notification Badge */}
+              {/* Action Button 1: Secure Client Portal Button with Status Indicator */}
               <button
                 onClick={onOpenPortal || onOpenVault}
-                className="hidden xl:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#121824] hover:bg-[#1A2538] border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold text-[#E4C999] hover:text-white transition-all shadow-sm group whitespace-nowrap shrink-0 cursor-pointer relative"
-                title="Access Secure Client Portal (3 New Case Updates & Document Alerts)"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#121927] hover:bg-[#182338] border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold text-[#E4C999] hover:text-white transition-all shadow-sm group whitespace-nowrap shrink-0 cursor-pointer relative"
+                title="Secure Client Portal Login (WebAuthn Passkey & CTS Vault)"
               >
                 <Lock className="w-3.5 h-3.5 text-[#C5A880] group-hover:scale-110 transition-transform" />
-                <span>{t('nav.clientPortal')}</span>
-                <span className="px-1.5 py-0.2 bg-red-600 text-white font-mono text-[9px] font-bold rounded-full ml-1 animate-pulse">
-                  3 NEW
-                </span>
+                <span className="whitespace-nowrap">{t('nav.clientPortal')}</span>
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-0.5" />
               </button>
 
-              {/* Primary Consultation Action CTA */}
+              {/* Action Button 2: Secure File Sharing / Client Vault Button */}
+              <button
+                onClick={onOpenVault}
+                className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#101622] hover:bg-[#162030] border border-[#1E293E] hover:border-[#C5A880]/50 text-xs font-medium text-[#A6B4CD] hover:text-white transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                title={t('nav.secureFiles')}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880]" />
+                <span className="whitespace-nowrap">{t('nav.secureFiles')}</span>
+              </button>
+
+              {/* Primary Consultation Action CTA (Shown on wider desktop screens) */}
               <button
                 onClick={onOpenConsultation}
-                className="hidden sm:inline-flex px-4 sm:px-5 py-2.5 text-xs uppercase tracking-wider font-semibold text-[#0A0E17] bg-gradient-to-r from-[#C5A880] to-[#DFBE82] rounded-lg hover:brightness-110 transition-all shadow-md shadow-[#C5A880]/20 whitespace-nowrap shrink-0"
+                className="hidden 2xl:inline-flex px-3.5 py-2 text-xs uppercase tracking-wider font-semibold text-[#0A0E17] bg-gradient-to-r from-[#C5A880] to-[#DFBE82] rounded-lg hover:brightness-110 transition-all shadow-md shadow-[#C5A880]/20 whitespace-nowrap shrink-0"
               >
                 {t('nav.scheduleConsultation')}
               </button>
 
-              {/* Mobile Menu Toggle Button */}
+              {/* Responsive Hamburger Menu Toggle Button (Visible below xl / 1280px) */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 text-[#A6B2C4] hover:text-white"
+                className="xl:hidden p-1.5 sm:p-2 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-[#A6B2C4] hover:text-white transition-all shrink-0 cursor-pointer"
                 aria-label="Toggle Navigation Menu"
+                aria-expanded={mobileMenuOpen}
               >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                {mobileMenuOpen ? <X className="w-5 h-5 text-[#C5A880]" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
           </div>
 
-          {/* Mobile dropdown menu */}
+          {/* Mobile & Tablet Collapsible Menu Drawer (Visible below xl / 1280px) */}
           {mobileMenuOpen && (
-            <div className="lg:hidden mt-4 pt-4 border-t border-[#1C2537] bg-[#0A0E17] p-4 rounded-xl space-y-3">
+            <div className="xl:hidden mt-3 pt-4 border-t border-[#1C2537] bg-[#0A0E17]/98 backdrop-blur-lg p-4 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 max-h-[calc(100vh-120px)] overflow-y-auto border border-[#222E44]/80 animate-fadeIn">
               {/* Mobile Search Quick Trigger */}
               <button
                 onClick={() => {
@@ -360,50 +389,53 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              <a
-                href="#practice"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-1"
-              >
-                {t('nav.practice')}
-              </a>
-              <a
-                href="#advocates"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-1"
-              >
-                {t('nav.advocates')}
-              </a>
-              <a
-                href="#cases"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-1"
-              >
-                {t('nav.cases')}
-              </a>
-              <a
-                href="#fee-calculator"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-1"
-              >
-                {t('nav.feeCalculator')}
-              </a>
-              <a
-                href="#insights"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-1"
-              >
-                {t('nav.insights')}
-              </a>
-              <a
-                href="#awards"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-1"
-              >
-                {t('nav.awards')}
-              </a>
+              {/* Navigation Links inside Drawer */}
+              <div className="space-y-1">
+                <a
+                  href="#practice"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                >
+                  {t('nav.practice')}
+                </a>
+                <a
+                  href="#advocates"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                >
+                  {t('nav.advocates')}
+                </a>
+                <a
+                  href="#cases"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                >
+                  {t('nav.cases')}
+                </a>
+                <a
+                  href="#fee-calculator"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                >
+                  {t('nav.feeCalculator')}
+                </a>
+                <a
+                  href="#insights"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                >
+                  {t('nav.insights')}
+                </a>
+                <a
+                  href="#awards"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                >
+                  {t('nav.awards')}
+                </a>
+              </div>
 
-              {/* Secure Client Portal Link with Alert Badge */}
+              {/* Secure Client Portal Link inside Drawer */}
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
@@ -421,7 +453,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </button>
 
-              {/* Secure File Sharing & Client Vault */}
+              {/* Secure File Sharing & Client Vault inside Drawer */}
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
@@ -447,12 +479,13 @@ export const Header: React.FC<HeaderProps> = ({
                 />
               </div>
 
+              {/* Primary Consultation Action CTA inside Drawer */}
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onOpenConsultation();
                 }}
-                className="w-full mt-2 py-2.5 px-4 bg-[#C5A880] text-[#0A0E17] text-xs uppercase tracking-wider font-semibold rounded-lg text-center"
+                className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-[#C5A880] to-[#DFBE82] text-[#0A0E17] text-xs uppercase tracking-wider font-semibold rounded-lg text-center hover:brightness-110 transition-all shadow-md"
               >
                 {t('nav.scheduleConsultation')}
               </button>

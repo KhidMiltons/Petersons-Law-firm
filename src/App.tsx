@@ -9,6 +9,7 @@ import { AdvocatesTeam } from './components/AdvocatesTeam';
 import { CaseBriefs } from './components/CaseBriefs';
 import { FeeCalculator } from './components/FeeCalculator';
 import { LegalInsights } from './components/LegalInsights';
+import { EastAfricaReachMap } from './components/EastAfricaReachMap';
 import { FirmAwards } from './components/FirmAwards';
 import { NairobiChambers } from './components/NairobiChambers';
 import { FAQ } from './components/FAQ';
@@ -66,7 +67,7 @@ export default function App() {
   useEffect(() => {
     const trackedSections = [
       'hero', 'practice', 'advocates', 'cases', 
-      'fee-calculator', 'insights', 'awards', 'chambers', 'faq'
+      'fee-calculator', 'insights', 'east-africa-reach', 'awards', 'chambers', 'faq'
     ];
 
     const elements = trackedSections
@@ -220,6 +221,11 @@ export default function App() {
               setSubItem(null);
             }
           }}
+        />
+
+        {/* East Africa Regional Reach & Cross-Border Sovereign Practice Map (d3-geo) */}
+        <EastAfricaReachMap
+          onOpenConsultation={handleOpenConsultation}
         />
 
         {/* Prestigious Law Firm Awards, Honors & Accreditations Showcase */}

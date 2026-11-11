@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { PRACTICE_AREAS, FIRM_DETAILS, ADVOCATES, ConsultationRecord, SAMPLE_CLIENT_MATTER } from '../data/firmData';
 import { useLanguage } from '../context/LanguageContext';
+import { LegalSpeechDictation } from './LegalSpeechDictation';
 
 interface ConsultationModalProps {
   isOpen: boolean;
@@ -932,17 +933,40 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-[#B2BDCE] mb-1">
-                {t('consult.facts')} *
-              </label>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-[#B2BDCE]">
+                  {t('consult.facts')} *
+                </label>
+                <span className="text-[10px] text-[#C5A880] font-mono flex items-center gap-1">
+                  <span>Voice Dictation &amp; Accessibility Ready</span>
+                </span>
+              </div>
+
+              {/* Web Speech API Voice Dictation Controller */}
+              <LegalSpeechDictation
+                value={formData.briefNarrative}
+                onChange={(val) => setFormData((prev) => ({ ...prev, briefNarrative: val }))}
+                onAppendText={(appended) =>
+                  setFormData((prev) => {
+                    const existing = prev.briefNarrative.trim();
+                    const separator = existing.length > 0 ? (existing.endsWith('.') || existing.endsWith('\n') ? ' ' : ' ') : '';
+                    return {
+                      ...prev,
+                      briefNarrative: existing ? `${existing}${separator}${appended.trimStart()}` : appended.trimStart()
+                    };
+                  })
+                }
+                disabled={isSubmitting}
+              />
+
               <textarea
                 required
-                rows={3}
-                placeholder="Provide a concise summary of the transaction, dispute background, relief sought, or existing court case number if any."
+                rows={4}
+                placeholder="Provide a concise summary of the transaction, dispute background, relief sought, or existing court case number if any (Type or use the Voice Dictation feature above)."
                 value={formData.briefNarrative}
                 onChange={(e) => setFormData({ ...formData, briefNarrative: e.target.value })}
-                className="w-full bg-[#131B2A] border border-[#202A3D] rounded-lg p-3 text-sm text-white focus:outline-none focus:border-[#C5A880] transition-colors"
+                className="w-full bg-[#131B2A] border border-[#202A3D] rounded-lg p-3 text-sm text-white focus:outline-none focus:border-[#C5A880] transition-colors leading-relaxed"
               />
             </div>
 

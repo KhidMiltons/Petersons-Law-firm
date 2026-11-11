@@ -266,6 +266,15 @@ const translations: Record<Language, Record<string, string>> = {
     'consult.successTitle': 'Chambers Brief Received',
     'consult.successDesc': 'Your legal instructions have been logged securely. Chambers Duty Registrar is executing the statutory conflict check.',
     'consult.done': 'Done & Return to Chambers',
+    'consult.dictate': 'Dictate Inquiry (Web Speech)',
+    'consult.dictateListening': 'Listening... Speak clearly into your microphone',
+    'consult.dictateStop': 'Stop Dictation',
+    'consult.dictateLanguage': 'Dictation Language',
+    'consult.dictateUnsupported': 'Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari for voice dictation.',
+    'consult.dictatePermissionDenied': 'Microphone access was denied. Please allow microphone permissions in your browser address bar.',
+    'consult.dictateHelper': 'Accessibility feature: Dictate legal facts, transaction background, or court relief sought without manual typing.',
+    'consult.dictatePunctuationTip': 'Tip: Say "comma", "full stop", or "new line" to format legal clauses.',
+    'consult.dictateClear': 'Clear Narrative',
 
     // Secure Client Dashboard
     'dashboard.title': 'Secure Client Portal & Matter Management',
@@ -644,6 +653,15 @@ const translations: Record<Language, Record<string, string>> = {
     'consult.successTitle': 'Maagizo ya Kisheria Yamepokewa',
     'consult.successDesc': 'Maagizo yako ya kisheria yamehifadhiwa kwa usalama. Karani Mkuu anafanya uchunguzi wa mgongano wa kimaslahi.',
     'consult.done': 'Tayari & Rudi Ofisini',
+    'consult.dictate': 'Tamka Maelezo (Web Speech)',
+    'consult.dictateListening': 'Inasikiliza... Zungumza waziwazi kwenye maikrofoni',
+    'consult.dictateStop': 'Simamisha Kutamka',
+    'consult.dictateLanguage': 'Lugha ya Kutamka',
+    'consult.dictateUnsupported': 'Utambuzi wa sauti hautumiki katika kivinjari hiki. Tafadhali tumia Chrome, Edge, au Safari.',
+    'consult.dictatePermissionDenied': 'Ufikiaji wa maikrofoni ulikataliwa. Tafadhali ruhusu maikrofoni kwenye kivinjari chako.',
+    'consult.dictateHelper': 'Uwezeshaji: Tamka maelezo ya mkataba, nambari ya kesi, au nafuu ya kisheria unayotaka moja kwa moja.',
+    'consult.dictatePunctuationTip': 'Kidokezo: Unaweza kusema "koma", "kitone", au "mstari mpya" kupanga maelezo yako.',
+    'consult.dictateClear': 'Futa Maelezo',
 
     // Secure Client Dashboard
     'dashboard.title': 'Tovuti Salama ya Wateja na Usimamizi wa Kesi',

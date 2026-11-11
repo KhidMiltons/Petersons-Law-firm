@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LEGAL_ARTICLES, LegalArticle } from '../data/firmData';
-import { BookOpen, ArrowRight, X, BookmarkCheck, Printer, Clock, Download } from 'lucide-react';
+import { BookOpen, ArrowRight, X, BookmarkCheck, Printer, Clock, Download, Sparkles } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { PrintFriendlyModal } from './PrintFriendlyModal';
 import { formatLegalInsightForPrint, formatAllLegalInsightsForPrint, PrintDocument } from '../utils/printFriendly';
@@ -41,6 +41,19 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
       window.print();
     }, 150);
   };
+
+  // Keyboard shortcut listener: Cmd+P / Ctrl+P while reading article opens print preview
+  useEffect(() => {
+    if (!activeArticle) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        handlePrintSummary(activeArticle);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeArticle]);
 
   return (
     <section id="insights" className="py-24 bg-[#080B11] border-b border-[#1E2536] relative">
@@ -140,6 +153,32 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
           ))}
         </div>
 
+        {/* Section Print-Ready Export Dock */}
+        <div className="mt-12 p-4 sm:p-5 rounded-2xl bg-[#0D1422] border border-[#C5A880]/30 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#C5A880]/15 border border-[#C5A880]/30 flex items-center justify-center text-[#C5A880] shrink-0">
+              <Printer className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-white block font-cinzel">
+                Printer-Ready Legal Briefings &amp; Statutory Analysis
+              </span>
+              <p className="text-[11px] text-[#8C98AE] leading-tight mt-0.5">
+                Formatted with Chambers letterhead, official KLR citations, ratio decidendi, and Section 134 privilege disclaimers.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handlePrintSummaryCompendium}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#141E2F] hover:bg-[#C5A880] text-[#E4C999] hover:text-[#0A0E17] text-xs font-semibold rounded-xl border border-[#C5A880]/40 hover:border-[#C5A880] transition-all shadow-md group cursor-pointer whitespace-nowrap"
+            title="Export all legal briefing articles in a clean, professional print-ready format"
+          >
+            <Printer className="w-4 h-4 text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
+            <span>Export Complete Digest (PDF)</span>
+          </button>
+        </div>
+
         {/* Full Article Reader Modal */}
         {activeArticle && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
@@ -177,7 +216,7 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
                 </div>
               </div>
 
-              <div className="p-6 md:p-8 overflow-y-auto space-y-4 text-sm text-[#BAC5D6] leading-relaxed">
+              <div className="p-6 md:p-8 overflow-y-auto space-y-4 text-sm text-[#BAC5D6] leading-relaxed relative">
                 <div className="p-3 bg-[#131B29] rounded-xl border border-[#20293D] text-xs font-mono text-[#E4C999]">
                   Official Chambers Citation: {activeArticle.citation}
                 </div>
@@ -192,6 +231,23 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
                   <strong className="text-white block mb-1">Legal Disclaimer:</strong>
                   This briefing is published for informational purposes under the auspices of Petersons Angwenyi &amp; Associates Advocates and does not constitute formal legal counsel. For actionable legal opinions on specific commercial transactions, contact chambers registry.
                 </div>
+              </div>
+
+              {/* Floating Print-Ready Button for Clean PDF / Paper Exports during reading */}
+              <div className="absolute bottom-20 right-6 z-20 pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => handlePrintSummary(activeArticle)}
+                  className="flex items-center gap-2 px-3.5 py-2.5 bg-[#0C1322]/95 hover:bg-[#C5A880] text-[#E4C999] hover:text-[#0A0E17] text-xs font-semibold rounded-xl border border-[#C5A880]/60 hover:border-[#C5A880] shadow-2xl backdrop-blur-md transition-all group cursor-pointer hover:scale-105 active:scale-95 ring-1 ring-black/50"
+                  title="Floating Print-Ready Action: Trigger print media query stylesheet for clean, professional PDF or paper export"
+                  aria-label="Floating Print Briefing Button"
+                >
+                  <Printer className="w-4 h-4 text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
+                  <span>Print Briefing (PDF)</span>
+                  <span className="hidden sm:inline font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#162134] group-hover:bg-[#8D7249] text-[#A6B4CD] group-hover:text-[#0A0E17]">
+                    ⌘P
+                  </span>
+                </button>
               </div>
 
               <div className="p-4 bg-[#121927] border-t border-[#222E46] flex items-center justify-between">

@@ -6,6 +6,7 @@ import {
   ScanFace, Usb
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { getRegisteredPasskeys, WebAuthnPasskey } from '../types/webauthn';
 
 export interface BiometricVerificationModalProps {
   isOpen: boolean;
@@ -76,9 +77,22 @@ export const BiometricVerificationModal: React.FC<BiometricVerificationModalProp
     setDeviceInfo(platform);
 
     addLog('WebAuthn API initialized. Checking platform authenticators...');
-    addLog(`Target Relying Party: "petersonsadvocates.com" (Chambers Registry)`);
+    addLog(`Target Relying Party: "petersonsadvocates.co.ke" (Chambers Registry)`);
     addLog(`Subject: ${officerName} (${clientEntity})`);
     addLog(`Statutory Clearance: KICA § 83B Advanced Electronic Signature`);
+
+    // Check if user has enrolled passkeys
+    const enrolledKeys = getRegisteredPasskeys().filter(
+      k => k.officerName.toLowerCase() === officerName.toLowerCase() ||
+           k.clientEntity.toLowerCase() === clientEntity.toLowerCase()
+    );
+    if (enrolledKeys.length > 0) {
+      const activeKey = enrolledKeys[0];
+      addLog(`[PASSKEY_MATCH] Detected Enrolled FIDO2 Hardware Key: "${activeKey.nickname}"`);
+      addLog(`[AAGUID] ${activeKey.aaguid} · Algorithm: ${activeKey.algorithm}`);
+    } else {
+      addLog('[PASSKEY_INFO] No specific hardware key enrolled for this identity. Generating transient FIDO2 assertion.');
+    }
 
     // Auto-attempt initiation
     initiateBiometricVerification();
