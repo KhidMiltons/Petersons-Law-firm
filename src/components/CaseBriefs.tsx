@@ -33,6 +33,7 @@ import {
   PrecedentAnnotation,
   getAnnotationsForBrief,
 } from '../utils/caseAnnotations';
+import { CaseBriefTimeline } from './CaseBriefTimeline';
 
 interface KeyTakeawayBullet {
   precedentTitle: string;
@@ -611,6 +612,9 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
             </div>
           </div>
         )}
+
+        {/* Vertical Historical Case Chronology Timeline synced to Selected Brief */}
+        <CaseBriefTimeline brief={selectedBrief} />
 
         {/* Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

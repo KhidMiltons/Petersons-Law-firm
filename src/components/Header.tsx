@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, Globe, Search, ShieldCheck, Check, ChevronDown, Lock, Sun, BookOpen, Clock } from 'lucide-react';
+import { Menu, X, Globe, Search, ShieldCheck, Check, ChevronDown, Lock, Sun, BookOpen } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useReadingProgress } from '../context/ReadingProgressContext';
 import { GlobalTimeClock } from './GlobalTimeClock';
@@ -66,6 +66,30 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Automatically close the mobile drawer at xl (>= 1280px) or on Escape key press
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const handleResize = () => {
+      if (window.innerWidth >= 1280) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
   const handleSwitchLanguage = (newLang: 'en' | 'sw') => {
     if (newLang === language) {
       setLangDropdownOpen(false);
@@ -81,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 w-full max-w-full overflow-x-hidden transition-all duration-300">
+    <header className="fixed top-0 left-0 right-0 z-40 w-full max-w-full overflow-x-clip transition-all duration-300">
       {/* Subtle Progress Bar at the Very Top of the Browser Window */}
       <div 
         className="w-full h-[2.5px] sm:h-[3px] bg-[#0A0E17]/90 overflow-hidden relative"
@@ -110,30 +134,37 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Floating Reading Progress Telemetry Pill when reading long-form Legal Insights or Case Briefs */}
+      {/* Floating Reading Progress Telemetry Badge (Viewport-Containment Safe) */}
       {isLongFormActive && (
-        <div className="absolute right-3 sm:right-6 top-[5px] z-50 pointer-events-none animate-fadeIn">
-          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-0.5 rounded-full bg-[#0A0F1B]/95 border border-[#C5A880]/50 shadow-xl backdrop-blur-md text-[10px] font-mono text-[#E4C999]">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-            <BookOpen className="w-3 h-3 text-[#C5A880]" />
-            <span className="text-[#C5A880] font-semibold uppercase tracking-wider hidden sm:inline">
-              {sourceType === 'insight' ? 'Reading Insight' : 
-               sourceType === 'case' ? 'Case Precedent' : 
-               sourceType === 'section-insights' ? 'Legal Insights' : 'Case Precedents'}
+        <div className="fixed right-4 lg:right-6 bottom-5 z-40 pointer-events-none max-w-[calc(100vw-2rem)]">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#0A0F1B]/95 border border-[#C5A880]/50 shadow-xl backdrop-blur-md text-[11px] font-mono text-[#E4C999] whitespace-nowrap max-w-full">
+            <BookOpen className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
+            <span className="text-[#C5A880] font-semibold uppercase tracking-wider truncate">
+              {sourceType === 'insight'
+                ? language === 'sw' ? 'Makala' : 'Reading Insight'
+                : sourceType === 'case'
+                  ? language === 'sw' ? 'Uamuzi' : 'Case Precedent'
+                  : sourceType === 'section-insights'
+                    ? t('nav.insights')
+                    : t('nav.cases')}
             </span>
             {readingMetrics && (
               <>
-                <span className="text-[#56657F] hidden md:inline">·</span>
-                <span className="text-white font-medium hidden md:inline">{readingMetrics.label}</span>
+                <span className="text-[#56657F] hidden sm:inline" aria-hidden="true">·</span>
+                <span className="text-white font-medium hidden sm:inline whitespace-nowrap">
+                  {readingMetrics.label}
+                </span>
               </>
             )}
-            <span className="text-[#56657F]">·</span>
-            <span className="text-[#DFBE82] font-bold tabular-nums">{Math.round(activeProgress)}%</span>
+            <span className="text-[#56657F]" aria-hidden="true">·</span>
+            <span className="text-[#DFBE82] font-bold tabular-nums shrink-0">
+              {Math.round(activeProgress)}%
+            </span>
           </div>
         </div>
       )}
 
-      {/* Small, Elegant Global Time Clock Component (Nairobi HQ, London, New York) */}
+      {/* Small, Elegant Global Time Clock Utility Bar */}
       <GlobalTimeClock
         variant="header-bar"
         onOpenConsultation={onOpenConsultation}
@@ -141,12 +172,13 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Floating Language Switch Toast Feedback */}
       {langToast && (
-        <div className="fixed top-20 right-6 z-50 p-3 bg-[#0D1420]/95 border border-[#C5A880]/60 rounded-xl shadow-2xl text-xs text-[#E4C999] flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
-          <Globe className="w-4 h-4 text-[#C5A880] shrink-0 animate-spin" />
-          <span className="font-medium">{langToast}</span>
+        <div className="fixed top-20 right-4 lg:right-6 z-50 p-3 bg-[#0D1420]/95 border border-[#C5A880]/60 rounded-xl shadow-2xl text-xs text-[#E4C999] flex items-center gap-2.5 max-w-[calc(100vw-2rem)] backdrop-blur-md">
+          <Globe className="w-4 h-4 text-[#C5A880] shrink-0" />
+          <span className="font-medium truncate">{langToast}</span>
           <button
+            type="button"
             onClick={() => setLangToast(null)}
-            className="text-[#728299] hover:text-white p-0.5"
+            className="text-[#728299] hover:text-white p-0.5 shrink-0 cursor-pointer"
             aria-label="Dismiss language notification"
           >
             <X className="w-3.5 h-3.5" />
@@ -156,95 +188,81 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Main Top Navigation Bar */}
       <div
-        className={`w-full max-w-full overflow-x-hidden transition-all duration-300 ${
+        className={`w-full max-w-full overflow-x-clip transition-all duration-300 ${
           isScrolled
-            ? 'bg-[#080B11]/95 backdrop-blur-md border-b border-[#1A2334] py-2.5 sm:py-3 shadow-xl'
-            : 'bg-[#080B11]/90 backdrop-blur-sm border-b border-[#1A2334]/60 py-3 sm:py-3.5'
+            ? 'bg-[#080B11]/95 backdrop-blur-md border-b border-[#1A2334] py-2.5 shadow-xl'
+            : 'bg-[#080B11]/90 backdrop-blur-sm border-b border-[#1A2334]/60 py-3'
         }`}
       >
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Clean 3-Part Flexbox Navigation Row: Left (Brand), Center (Nav Links), Right (Action Buttons) */}
-          <div className="flex items-center justify-between gap-3 sm:gap-4 xl:gap-6 w-full">
-          
+        <div className="w-full max-w-full mx-auto px-4 lg:px-6">
+          {/* Clean 3-Part Flexbox Navigation Row: Left (Brand), Center (Nav Links), Right (Utilities + Search + Menu) */}
+          <div className="flex items-center justify-between gap-x-3 xl:gap-x-6 w-full max-w-full min-w-0">
+
             {/* PART 1 (LEFT): Brand Wordmark Element with Heraldic Seal */}
             <a
               href="#"
-              className="font-cinzel text-sm sm:text-base xl:text-lg font-bold tracking-wider text-white whitespace-nowrap shrink-0 hover:text-[#DFBE82] transition-colors flex items-center gap-2 sm:gap-2.5 group"
+              className="font-cinzel text-xs 2xl:text-sm font-bold tracking-normal text-white whitespace-nowrap shrink-0 min-w-0 max-w-[58vw] sm:max-w-none hover:text-[#DFBE82] transition-colors flex items-center gap-2 group"
             >
-              {/* Subtle heraldic crest seal */}
-              <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-md border border-[#C5A880]/50 bg-[#C5A880]/10 flex items-center justify-center text-[#C5A880] text-[11px] sm:text-xs font-serif font-bold shrink-0 group-hover:border-[#C5A880] transition-colors">
+              <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-md border border-[#C5A880]/50 bg-[#C5A880]/10 flex items-center justify-center text-[#C5A880] text-[11px] sm:text-xs font-serif font-bold whitespace-nowrap shrink-0 group-hover:border-[#C5A880] transition-colors">
                 P
               </span>
-              <span className="whitespace-nowrap tracking-wide">
+              <span className="truncate sm:overflow-visible whitespace-nowrap">
                 PETERSONS ANGWENYI &amp; ASSOCIATES
               </span>
             </a>
 
-            {/* PART 2 (CENTER): 6 Navigation Links (Cleanly collapses below xl / 1280px into hamburger drawer) */}
+            {/* PART 2 (CENTER): 6 Navigation Links (Hidden below 1280px / xl into hamburger drawer) */}
             <nav
-              className="hidden xl:flex items-center gap-3.5 2xl:gap-5 text-[11px] 2xl:text-xs uppercase tracking-wider font-medium text-[#A6B2C4] whitespace-nowrap shrink-0"
+              className="hidden xl:flex items-center gap-x-3 xl:gap-x-6 text-xs uppercase tracking-normal font-medium text-[#A6B2C4] whitespace-nowrap shrink-0"
               aria-label="Primary Navigation"
             >
               <a
                 href="#practice"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
+                className="text-xs hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0 py-1"
               >
                 {t('nav.practice')}
               </a>
               <a
                 href="#advocates"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
+                className="text-xs hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0 py-1"
               >
                 {t('nav.advocates')}
               </a>
               <a
                 href="#cases"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
+                className="text-xs hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0 py-1"
               >
                 {t('nav.cases')}
               </a>
               <a
                 href="#fee-calculator"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
+                className="text-xs hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0 py-1"
               >
                 {t('nav.feeCalculator')}
               </a>
               <a
                 href="#insights"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
+                className="text-xs hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0 py-1"
               >
                 {t('nav.insights')}
               </a>
               <a
                 href="#awards"
-                className="hover:text-[#DFBE82] transition-colors whitespace-nowrap py-1"
+                className="text-xs hover:text-[#DFBE82] transition-colors whitespace-nowrap shrink-0 py-1"
               >
                 {t('nav.awards')}
               </a>
             </nav>
 
-            {/* PART 3 (RIGHT): Action Buttons & Essential Utilities */}
-            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap">
-              {/* Search Index Trigger Button (⌘K) */}
-              <button
-                onClick={onOpenSearch}
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-xs text-[#8C98AE] hover:text-white transition-all group cursor-pointer whitespace-nowrap shrink-0"
-                title="Search Chambers Index (⌘K / Ctrl+K)"
-                aria-label="Search Chambers Index"
-              >
-                <Search className="w-3.5 h-3.5 text-[#C5A880] group-hover:scale-110 transition-transform" />
-                <span className="hidden 2xl:inline font-sans text-xs font-medium">{t('search.triggerLabel')}</span>
-                <kbd className="inline-flex items-center text-[10px] font-mono px-1.5 py-0.2 bg-[#1A2334] text-[#A6B2C4] rounded border border-[#2D3B54]">
-                  ⌘K
-                </kbd>
-              </button>
-
-              {/* Language Switcher Component with Segmented Controls & Dropdown */}
+            {/* PART 3 (RIGHT): Compact Utilities, Portal, Tafuta/Search & Mobile Drawer Toggle */}
+            <div className="flex items-center gap-x-2 xl:gap-x-3 shrink-0 whitespace-nowrap">
+              {/* Language Switcher Segmented Control */}
               <div className="relative flex items-center shrink-0" ref={langMenuRef}>
-                <div className="flex items-center p-0.5 bg-[#121824] rounded-lg border border-[#222B3D] text-[11px] font-mono shadow-inner">
+                <div className="flex items-center p-0.5 bg-[#121824] rounded-lg border border-[#222B3D] text-[11px] font-mono shadow-inner whitespace-nowrap">
                   <button
+                    type="button"
                     onClick={() => handleSwitchLanguage('en')}
-                    className={`px-1.5 sm:px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 ${
+                    className={`px-1.5 py-1 rounded transition-all font-semibold whitespace-nowrap cursor-pointer ${
                       language === 'en'
                         ? 'bg-[#C5A880] text-[#0A0E17] shadow-sm font-bold'
                         : 'text-[#8C98AE] hover:text-white'
@@ -252,12 +270,13 @@ export const Header: React.FC<HeaderProps> = ({
                     aria-label="Switch to English (Official Court Language)"
                     title="English (Official Court Language)"
                   >
-                    <span>EN</span>
+                    EN
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => handleSwitchLanguage('sw')}
-                    className={`px-1.5 sm:px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 ${
+                    className={`px-1.5 py-1 rounded transition-all font-semibold whitespace-nowrap cursor-pointer ${
                       language === 'sw'
                         ? 'bg-[#C5A880] text-[#0A0E17] shadow-sm font-bold'
                         : 'text-[#8C98AE] hover:text-white'
@@ -265,13 +284,13 @@ export const Header: React.FC<HeaderProps> = ({
                     aria-label="Badilisha kwa Kiswahili (Lugha ya Kitaifa)"
                     title="Kiswahili (Lugha ya Kitaifa)"
                   >
-                    <span>SW</span>
+                    SW
                   </button>
 
-                  {/* Dropdown chevron button */}
                   <button
+                    type="button"
                     onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-                    className="px-1 py-1 text-[#66768E] hover:text-white transition-colors border-l border-[#1D273B] ml-0.5"
+                    className="px-1 py-1 text-[#66768E] hover:text-white transition-colors border-l border-[#1D273B] ml-0.5 cursor-pointer"
                     aria-label="Expand language options"
                     title="Language options"
                   >
@@ -281,7 +300,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Popover Language Menu */}
                 {langDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-[#0D131F] border border-[#C5A880]/40 rounded-xl shadow-2xl py-1.5 z-50 animate-fadeIn text-xs">
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-[#0D131F] border border-[#C5A880]/40 rounded-xl shadow-2xl py-1.5 z-50 text-xs">
                     <div className="px-3 py-1.5 border-b border-[#1A2538] flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-[#697992]">
                       <span className="flex items-center gap-1.5">
                         <Globe className="w-3 h-3 text-[#C5A880]" />
@@ -291,8 +310,9 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => handleSwitchLanguage('en')}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
+                      className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors cursor-pointer ${
                         language === 'en'
                           ? 'bg-[#C5A880]/15 text-[#E4C999] font-semibold'
                           : 'text-[#A6B4CD] hover:bg-[#151F32] hover:text-white'
@@ -309,8 +329,9 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => handleSwitchLanguage('sw')}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
+                      className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors cursor-pointer ${
                         language === 'sw'
                           ? 'bg-[#C5A880]/15 text-[#E4C999] font-semibold'
                           : 'text-[#A6B4CD] hover:bg-[#151F32] hover:text-white'
@@ -329,53 +350,80 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
 
-              {/* Dark / Light Mode Toggle Component */}
+              {/* Dark / Light Mode Toggle */}
               <ThemeToggle variant="compact" />
 
-              {/* Action Button 1: Secure Client Portal Button with Status Indicator */}
+              {/* Secure Client Portal Compact Action (Full label on 2xl+, icon-only below so nav never clips) */}
               <button
+                type="button"
                 onClick={onOpenPortal || onOpenVault}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#121927] hover:bg-[#182338] border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold text-[#E4C999] hover:text-white transition-all shadow-sm group whitespace-nowrap shrink-0 cursor-pointer relative"
-                title="Secure Client Portal Login (WebAuthn Passkey & CTS Vault)"
+                className="hidden sm:inline-flex items-center gap-1.5 p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-[#121927] hover:bg-[#182338] border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold text-[#E4C999] hover:text-white transition-all shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
+                title={t('nav.clientPortal')}
+                aria-label={t('nav.clientPortal')}
               >
-                <Lock className="w-3.5 h-3.5 text-[#C5A880] group-hover:scale-110 transition-transform" />
-                <span className="whitespace-nowrap">{t('nav.clientPortal')}</span>
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-0.5" />
+                <Lock className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
+                <span className="hidden 2xl:inline whitespace-nowrap">
+                  {language === 'sw' ? 'Tovuti' : 'Portal'}
+                </span>
               </button>
 
-              {/* Action Button 2: Secure File Sharing / Client Vault Button */}
+              {/* Secure File Vault Compact Action (Icon button on xl+, full inside mobile drawer) */}
               <button
+                type="button"
                 onClick={onOpenVault}
-                className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#101622] hover:bg-[#162030] border border-[#1E293E] hover:border-[#C5A880]/50 text-xs font-medium text-[#A6B4CD] hover:text-white transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                className="hidden lg:inline-flex items-center gap-1.5 p-1.5 rounded-lg bg-[#101622] hover:bg-[#162030] border border-[#1E293E] hover:border-[#C5A880]/50 text-xs font-medium text-[#A6B4CD] hover:text-white transition-all whitespace-nowrap shrink-0 cursor-pointer"
                 title={t('nav.secureFiles')}
+                aria-label={t('nav.secureFiles')}
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880]" />
-                <span className="whitespace-nowrap">{t('nav.secureFiles')}</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
               </button>
 
-              {/* Primary Consultation Action CTA (Shown on wider desktop screens) */}
+              {/* Search / "Tafuta" Trigger Button — cleanly positioned inside right edge with comfortable margin */}
               <button
-                onClick={onOpenConsultation}
-                className="hidden 2xl:inline-flex px-3.5 py-2 text-xs uppercase tracking-wider font-semibold text-[#0A0E17] bg-gradient-to-r from-[#C5A880] to-[#DFBE82] rounded-lg hover:brightness-110 transition-all shadow-md shadow-[#C5A880]/20 whitespace-nowrap shrink-0"
+                type="button"
+                onClick={onOpenSearch}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-xs text-[#E4C999] hover:text-white transition-all group cursor-pointer whitespace-nowrap shrink-0"
+                title={`${t('search.triggerLabel')} (⌘K / Ctrl+K)`}
+                aria-label={t('search.triggerLabel')}
               >
-                {t('nav.scheduleConsultation')}
+                <Search className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
+                <span className="hidden sm:inline font-sans text-xs font-medium whitespace-nowrap">
+                  {t('search.triggerLabel')}
+                </span>
+                <kbd className="hidden 2xl:inline-flex items-center text-[10px] font-mono px-1.5 py-0.2 bg-[#1A2334] text-[#A6B2C4] rounded border border-[#2D3B54] shrink-0">
+                  ⌘K
+                </kbd>
+              </button>
+
+              {/* Primary Consultation CTA (2xl+ only so 1280px Swahili bar has ample breathing room) */}
+              <button
+                type="button"
+                onClick={onOpenConsultation}
+                className="hidden 2xl:inline-flex px-3 py-1.5 text-xs uppercase tracking-wide font-semibold text-[#0A0E17] bg-gradient-to-r from-[#C5A880] to-[#DFBE82] rounded-lg hover:brightness-110 transition-all shadow-md shadow-[#C5A880]/20 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                {language === 'sw' ? 'Mashauriano' : 'Consult'}
               </button>
 
               {/* Responsive Hamburger Menu Toggle Button (Visible below xl / 1280px) */}
               <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="xl:hidden p-1.5 sm:p-2 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-[#A6B2C4] hover:text-white transition-all shrink-0 cursor-pointer"
+                type="button"
+                onClick={() => setMobileMenuOpen((prev) => !prev)}
+                className="xl:hidden p-1.5 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-[#A6B2C4] hover:text-white transition-all shrink-0 cursor-pointer"
                 aria-label="Toggle Navigation Menu"
                 aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-navigation-drawer"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5 text-[#C5A880]" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
           </div>
 
-          {/* Mobile & Tablet Collapsible Menu Drawer (Visible below xl / 1280px) */}
+          {/* Mobile & Tablet Collapsible Drawer Menu (Triggers below 1280px / xl) */}
           {mobileMenuOpen && (
-            <div className="xl:hidden mt-3 pt-4 border-t border-[#1C2537] bg-[#0A0E17]/98 backdrop-blur-lg p-4 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 max-h-[calc(100vh-120px)] overflow-y-auto border border-[#222E44]/80 animate-fadeIn">
+            <div
+              id="mobile-navigation-drawer"
+              className="xl:hidden w-full max-w-full mt-3 pt-4 border-t border-[#1C2537] bg-[#0A0E17]/98 backdrop-blur-lg p-4 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 max-h-[calc(100vh-120px)] overflow-y-auto border border-[#222E44]/80 animate-fadeIn"
+            >
               {/* Mobile Search Quick Trigger */}
               <button
                 onClick={() => {
@@ -445,51 +493,51 @@ export const Header: React.FC<HeaderProps> = ({
                 <ThemeToggle variant="segmented" className="w-48" />
               </div>
 
-              {/* Navigation Links inside Drawer */}
-              <div className="space-y-1">
+              {/* Vertical Navigation Links inside Drawer */}
+              <nav className="flex flex-col space-y-1" aria-label="Mobile Navigation">
                 <a
                   href="#practice"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                  className="block text-xs uppercase tracking-wide font-medium text-[#A6B2C4] hover:text-[#C5A880] py-2.5 px-3 rounded-lg hover:bg-[#121824] transition-colors whitespace-nowrap"
                 >
                   {t('nav.practice')}
                 </a>
                 <a
                   href="#advocates"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                  className="block text-xs uppercase tracking-wide font-medium text-[#A6B2C4] hover:text-[#C5A880] py-2.5 px-3 rounded-lg hover:bg-[#121824] transition-colors whitespace-nowrap"
                 >
                   {t('nav.advocates')}
                 </a>
                 <a
                   href="#cases"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                  className="block text-xs uppercase tracking-wide font-medium text-[#A6B2C4] hover:text-[#C5A880] py-2.5 px-3 rounded-lg hover:bg-[#121824] transition-colors whitespace-nowrap"
                 >
                   {t('nav.cases')}
                 </a>
                 <a
                   href="#fee-calculator"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                  className="block text-xs uppercase tracking-wide font-medium text-[#A6B2C4] hover:text-[#C5A880] py-2.5 px-3 rounded-lg hover:bg-[#121824] transition-colors whitespace-nowrap"
                 >
                   {t('nav.feeCalculator')}
                 </a>
                 <a
                   href="#insights"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                  className="block text-xs uppercase tracking-wide font-medium text-[#A6B2C4] hover:text-[#C5A880] py-2.5 px-3 rounded-lg hover:bg-[#121824] transition-colors whitespace-nowrap"
                 >
                   {t('nav.insights')}
                 </a>
                 <a
                   href="#awards"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-sm text-[#A6B2C4] hover:text-[#C5A880] py-2 px-2 rounded-lg hover:bg-[#121824] transition-colors"
+                  className="block text-xs uppercase tracking-wide font-medium text-[#A6B2C4] hover:text-[#C5A880] py-2.5 px-3 rounded-lg hover:bg-[#121824] transition-colors whitespace-nowrap"
                 >
                   {t('nav.awards')}
                 </a>
-              </div>
+              </nav>
 
               {/* Secure Client Portal Link inside Drawer */}
               <button

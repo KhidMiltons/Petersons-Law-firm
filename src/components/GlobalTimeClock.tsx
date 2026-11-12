@@ -199,69 +199,72 @@ export const GlobalTimeClock: React.FC<{
     );
   }
 
-  // Default: 'header-bar' (Hairline top strip)
+  // Default: 'header-bar' (Hairline top strip strictly contained within 100% viewport width)
   return (
     <>
-      <div className="border-b border-[#17202F] bg-[#06090E]/95 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-1.5 text-[11px] font-mono tracking-wider text-[#8C98AE] w-full max-w-full overflow-x-hidden">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 w-full overflow-x-hidden">
+      <div className="w-full max-w-full overflow-x-hidden border-b border-[#17202F] bg-[#06090E]/95 backdrop-blur-md px-4 lg:px-6 py-1.5 text-[11px] font-mono tracking-normal text-[#8C98AE]">
+        <div className="w-full max-w-full mx-auto flex items-center justify-between gap-x-3 xl:gap-x-6 min-w-0">
           
           {/* Left: Global Hubs Live Clocks */}
           <button
+            type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2.5 sm:gap-3.5 hover:text-white transition-colors text-left group cursor-pointer"
+            className="flex items-center gap-x-3 xl:gap-x-6 min-w-0 whitespace-nowrap shrink hover:text-white transition-colors text-left group cursor-pointer"
             title="Click for full cross-border arbitral & financial hub details"
           >
-            <div className="flex items-center gap-1.5 text-[#C5A880]">
-              <Clock className="w-3.5 h-3.5 text-[#C5A880] group-hover:rotate-45 transition-transform duration-300" />
-              <span className="font-semibold tracking-wider text-[#DFBE82]">
+            <div className="inline-flex items-center gap-1.5 text-[#C5A880] whitespace-nowrap shrink-0">
+              <Clock className="w-3.5 h-3.5 text-[#C5A880] group-hover:rotate-45 transition-transform duration-300 shrink-0" />
+              <span className="hidden xl:inline-flex font-semibold tracking-wide text-[#DFBE82] whitespace-nowrap">
                 {language === 'sw' ? 'MUDA WA KIMATAIFA' : 'GLOBAL HUBS'}:
               </span>
             </div>
 
-            {/* Nairobi (HQ) */}
-            <div className="flex items-center gap-1.5 text-white font-medium">
-              <span className="text-[#C5A880] font-bold">NAIROBI</span>
-              <span className="text-[#E8EDF5] font-mono">{formatHubTime('Africa/Nairobi')}</span>
-              <span className="text-[#718096] text-[10px]">EAT</span>
+            {/* Nairobi (HQ) - Always visible */}
+            <div className="inline-flex items-center gap-1 text-white font-medium whitespace-nowrap tabular-nums shrink-0">
+              <span className="text-[#C5A880] font-bold whitespace-nowrap">NAIROBI</span>
+              <span className="text-[#E8EDF5] font-mono whitespace-nowrap">{formatHubTime('Africa/Nairobi')}</span>
+              <span className="text-[#718096] text-[10px] whitespace-nowrap">EAT</span>
             </div>
 
-            <span className="text-[#2C3B52]" aria-hidden="true">·</span>
-
-            {/* London */}
-            <div className="hidden sm:flex items-center gap-1.5 text-[#A6B2C4]">
-              <span className="text-white">LONDON</span>
-              <span className="text-[#CBD5E1] font-mono">{formatHubTime('Europe/London')}</span>
-              <span className="text-[#718096] text-[10px]">GMT</span>
+            {/* London - Hidden below xl */}
+            <div className="hidden xl:inline-flex items-center gap-1 text-[#A6B2C4] whitespace-nowrap tabular-nums shrink-0">
+              <span className="text-white whitespace-nowrap">LONDON</span>
+              <span className="text-[#CBD5E1] font-mono whitespace-nowrap">{formatHubTime('Europe/London')}</span>
+              <span className="text-[#718096] text-[10px] whitespace-nowrap">GMT</span>
             </div>
 
-            <span className="hidden sm:inline text-[#2C3B52]" aria-hidden="true">·</span>
-
-            {/* New York */}
-            <div className="hidden md:flex items-center gap-1.5 text-[#A6B2C4]">
-              <span className="text-white">NEW YORK</span>
-              <span className="text-[#CBD5E1] font-mono">{formatHubTime('America/New_York')}</span>
-              <span className="text-[#718096] text-[10px]">EST</span>
+            {/* New York - Hidden below xl */}
+            <div className="hidden xl:inline-flex items-center gap-1 text-[#A6B2C4] whitespace-nowrap tabular-nums shrink-0">
+              <span className="text-white whitespace-nowrap">NEW YORK</span>
+              <span className="text-[#CBD5E1] font-mono whitespace-nowrap">{formatHubTime('America/New_York')}</span>
+              <span className="text-[#718096] text-[10px] whitespace-nowrap">EST</span>
             </div>
 
-            <span className="hidden lg:inline text-[#C5A880] group-hover:translate-x-0.5 transition-transform text-[10px]">
+            <span className="hidden xl:inline-flex text-[#C5A880] group-hover:translate-x-0.5 transition-transform text-[10px] whitespace-nowrap shrink-0">
               [+]
             </span>
           </button>
 
           {/* Right: Chambers Registry & International Arbitration Standby */}
-          <div className="flex items-center gap-3 shrink-0 text-[10px] text-[#718096]">
-            <div className="hidden md:flex items-center gap-1.5 text-[#A6B2C4]">
-              <ShieldCheck className="w-3 h-3 text-[#C5A880]" />
-              <span>
+          <div className="flex items-center gap-x-3 xl:gap-x-6 shrink-0 whitespace-nowrap text-[11px] text-[#718096]">
+            {/* Compact Mobile/Tablet Label (< lg) */}
+            <span className="inline-flex lg:hidden items-center gap-1 text-[#A6B2C4] whitespace-nowrap">
+              <ShieldCheck className="w-3 h-3 text-[#C5A880] shrink-0" />
+              <span className="whitespace-nowrap">Upper Hill</span>
+            </span>
+
+            {/* Active Registry Status (lg+) */}
+            <div className="hidden lg:inline-flex items-center gap-1.5 text-[#A6B2C4] whitespace-nowrap">
+              <ShieldCheck className="w-3 h-3 text-[#C5A880] shrink-0" />
+              <span className="whitespace-nowrap">
                 {language === 'sw'
                   ? 'Masjala ya Upper Hill: Wazi'
                   : 'Upper Hill Chambers: Active Registry'}
               </span>
             </div>
 
-            <span className="hidden md:inline text-[#2C3B52]">·</span>
-
-            <span className="text-[#8C98AE]">
+            {/* Arbitration Note (xl+ only so medium screens never overflow) */}
+            <span className="hidden xl:inline-flex items-center text-[#8C98AE] whitespace-nowrap">
               {language === 'sw'
                 ? 'Usuluhishi wa Kimataifa (NCIA / LCIA)'
                 : 'Arbitration Counsel (NCIA / LCIA)'}
