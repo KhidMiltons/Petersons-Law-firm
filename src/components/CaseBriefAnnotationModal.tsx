@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   X, Highlighter, StickyNote, Plus, Trash2, Check, 
   Search, Printer, Download, Scale, FileText, Sparkles, 
@@ -7,6 +7,16 @@ import {
 } from 'lucide-react';
 import { CaseBrief } from '../data/firmData';
 import { useLanguage } from '../context/LanguageContext';
+import { useReadingProgress } from '../context/ReadingProgressContext';
+import { calculateCaseBriefReadingTime } from '../utils/readingTime';
+import { downloadCaseBriefPdf } from '../utils/caseBriefPdf';
+import {
+  PrecedentAnnotation,
+  getAnnotationsForBrief,
+  saveAnnotationsForBrief,
+} from '../utils/caseAnnotations';
+
+export type { PrecedentAnnotation };
 
 export interface PrecedentClause {
   number: number;
@@ -14,24 +24,6 @@ export interface PrecedentClause {
   category: 'Coram & Forum' | 'Factual Matrix' | 'Legal Issues' | 'Ratio Decidendi' | 'Decree & Relief';
   text: string;
   statutoryBasis?: string;
-}
-
-export interface PrecedentAnnotation {
-  id: string;
-  briefId: string;
-  clauseNumber: number;
-  type: 'highlight' | 'sticky-note';
-  color: 'amber' | 'emerald' | 'rose' | 'sky';
-  title?: string;
-  noteText?: string;
-  highlightedText?: string;
-  author: {
-    name: string;
-    role: string;
-    affiliation: 'Senior Counsel' | 'Partner' | 'Instructing Client' | 'Associate';
-  };
-  timestamp: string;
-  isResolved?: boolean;
 }
 
 interface CaseBriefAnnotationModalProps {
@@ -142,6 +134,7 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
   brief
 }) => {
   const { language } = useLanguage();
+  const { setLongFormProgress, clearLongFormProgress } = useReadingProgress();
 
   // Annotations state (with local storage backing)
   const [annotations, setAnnotations] = useState<PrecedentAnnotation[]>([]);
@@ -151,36 +144,33 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
   const [activeColor, setActiveColor] = useState<'amber' | 'emerald' | 'rose' | 'sky'>('amber');
   const [isIvoryMode, setIsIvoryMode] = useState<boolean>(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [docScrollPct, setDocScrollPct] = useState<number>(0);
 
-  // New Note Composer state
+  // New Note Composer & Text Selection state
   const [isComposingNote, setIsComposingNote] = useState<boolean>(false);
   const [composerClauseNum, setComposerClauseNum] = useState<number>(4);
   const [newNoteTitle, setNewNoteTitle] = useState<string>('');
   const [newNoteContent, setNewNoteContent] = useState<string>('');
+  const [newNoteQuotedText, setNewNoteQuotedText] = useState<string>('');
   const [newNoteType, setNewNoteType] = useState<'sticky-note' | 'highlight'>('sticky-note');
   const [newNoteAuthorAffiliation, setNewNoteAuthorAffiliation] = useState<'Senior Counsel' | 'Partner' | 'Instructing Client' | 'Associate'>('Senior Counsel');
+  const [selectedPassage, setSelectedPassage] = useState<{
+    clauseNumber: number;
+    text: string;
+  } | null>(null);
 
   // Load annotations on brief change
   useEffect(() => {
     if (!brief) return;
-    const storageKey = `paa_case_brief_annotations_${brief.id}`;
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try {
-        setAnnotations(JSON.parse(saved));
-        return;
-      } catch (e) {
-        // Fallback to initial
-      }
-    }
-    setAnnotations(getInitialAnnotations(brief.id));
+    setAnnotations(getAnnotationsForBrief(brief.id));
+    setSelectedPassage(null);
   }, [brief]);
 
-  // Save annotations to localStorage
+  // Save annotations & broadcast real-time update
   const saveAnnotations = (updated: PrecedentAnnotation[]) => {
     setAnnotations(updated);
     if (brief) {
-      localStorage.setItem(`paa_case_brief_annotations_${brief.id}`, JSON.stringify(updated));
+      saveAnnotationsForBrief(brief.id, updated);
     }
   };
 
@@ -189,6 +179,37 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
     if (!brief) return [];
     return getClausesForCaseBrief(brief);
   }, [brief]);
+
+  // Comprehensive dynamic reading time metrics calculated across the entire precedent dossier
+  const readingStats = useMemo(() => {
+    if (!brief) return null;
+    const clausesText = clauses.map(c => `${c.title} ${c.text} ${c.statutoryBasis || ''}`);
+    return calculateCaseBriefReadingTime(brief, clausesText);
+  }, [brief, clauses]);
+
+  // Synchronize reading progress on modal open & close
+  useEffect(() => {
+    if (isOpen && brief && readingStats) {
+      setLongFormProgress(0, 'case', brief.matterName, readingStats);
+      setDocScrollPct(0);
+    }
+    return () => {
+      if (isOpen) {
+        clearLongFormProgress();
+      }
+    };
+  }, [isOpen, brief?.id, readingStats, setLongFormProgress, clearLongFormProgress]);
+
+  // Track scroll position through the long-form judicial precedent
+  const handleDocumentScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!brief || !readingStats) return;
+    const target = e.currentTarget;
+    const maxScroll = target.scrollHeight - target.clientHeight;
+    if (maxScroll <= 0) return;
+    const pct = Math.min(100, Math.max(0, (target.scrollTop / maxScroll) * 100));
+    setDocScrollPct(pct);
+    setLongFormProgress(pct, 'case', brief.matterName, readingStats);
+  };
 
   // Filtered annotations for sidebar
   const filteredAnnotations = useMemo(() => {
@@ -218,6 +239,7 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
       color: activeColor,
       title: newNoteTitle.trim() || (newNoteType === 'sticky-note' ? 'Attorney Sticky Note' : 'Statutory Highlight'),
       noteText: newNoteContent.trim(),
+      highlightedText: newNoteQuotedText.trim() || undefined,
       author: {
         name: newNoteAuthorAffiliation === 'Senior Counsel' ? 'Milton Angwenyi, SC' : newNoteAuthorAffiliation === 'Partner' ? 'David Otieno' : 'Corporate Legal Counsel',
         role: newNoteAuthorAffiliation === 'Senior Counsel' ? 'Lead Senior Counsel' : 'Instructing Advocate',
@@ -233,6 +255,7 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
     // Reset composer
     setNewNoteTitle('');
     setNewNoteContent('');
+    setNewNoteQuotedText('');
     setIsComposingNote(false);
   };
 
@@ -250,21 +273,24 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
     saveAnnotations(updated);
   };
 
-  // Quick Highlight on clause
-  const handleQuickHighlightClause = (clauseNum: number) => {
+  // Quick Highlight on clause or exact selected text
+  const handleQuickHighlightClause = (clauseNum: number, customText?: string) => {
     if (!brief) return;
     const clause = clauses.find(c => c.number === clauseNum);
     if (!clause) return;
 
+    const snippet = (customText || clause.text.slice(0, 96)).trim();
     const newHighlight: PrecedentAnnotation = {
       id: `ann-${brief.id}-${Date.now()}`,
       briefId: brief.id,
       clauseNumber: clauseNum,
       type: 'highlight',
       color: activeColor,
-      title: `Highlighted: ${clause.title}`,
-      highlightedText: clause.text.slice(0, 120) + '...',
-      noteText: `Flagged for judicial authority review under ${clause.statutoryBasis || 'Chambers Precedents'}.`,
+      title: customText ? `Highlighted Passage (Clause ${clauseNum})` : `Highlighted: ${clause.title}`,
+      highlightedText: snippet,
+      noteText: customText
+        ? `Highlighted passage: "${snippet}"`
+        : `Flagged for judicial authority review under ${clause.statutoryBasis || 'Chambers Precedents'}.`,
       author: {
         name: 'Milton Angwenyi, SC',
         role: 'Senior Counsel',
@@ -275,6 +301,50 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
     };
 
     saveAnnotations([newHighlight, ...annotations]);
+    setSelectedPassage(null);
+    window.getSelection()?.removeAllRanges();
+  };
+
+  const handleClauseTextSelection = (clauseNum: number, clauseText: string) => {
+    const selection = window.getSelection()?.toString().trim() || '';
+    if (selection.length >= 4 && clauseText.includes(selection)) {
+      setSelectedPassage({ clauseNumber: clauseNum, text: selection });
+    } else if (selectedPassage?.clauseNumber === clauseNum && selection.length === 0) {
+      setSelectedPassage(null);
+    }
+  };
+
+  const renderHighlightedClauseText = (
+    text: string,
+    clauseAnns: PrecedentAnnotation[]
+  ): React.ReactNode => {
+    const highlights = clauseAnns.filter((a) => a.highlightedText && a.highlightedText.length >= 3);
+    if (highlights.length === 0) return text;
+
+    // Highlight the most recent matching passage cleanly without splitting into overlapping fragments
+    for (const hl of highlights) {
+      const target = hl.highlightedText!;
+      const idx = text.indexOf(target);
+      if (idx !== -1) {
+        const markClass =
+          hl.color === 'amber'
+            ? 'bg-amber-400/30 text-inherit px-1 rounded border-b-2 border-amber-400'
+            : hl.color === 'emerald'
+              ? 'bg-emerald-400/25 text-inherit px-1 rounded border-b-2 border-emerald-400'
+              : hl.color === 'rose'
+                ? 'bg-rose-400/25 text-inherit px-1 rounded border-b-2 border-rose-400'
+                : 'bg-sky-400/25 text-inherit px-1 rounded border-b-2 border-sky-400';
+
+        return (
+          <>
+            {text.slice(0, idx)}
+            <mark className={markClass}>{target}</mark>
+            {text.slice(idx + target.length)}
+          </>
+        );
+      }
+    }
+    return text;
   };
 
   // Print annotated precedent
@@ -308,6 +378,21 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
 
           {/* Right Action Tools */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Dynamic Reading Depth & Estimated Pace Telemetry */}
+            {readingStats && (
+              <div 
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#141C2B] border border-[#C5A880]/40 text-xs font-mono text-[#E4C999] shadow-sm"
+                title={`Estimated reading duration: ${readingStats.detailedLabel} (${readingStats.readingPaceNote})`}
+              >
+                <Clock className="w-3.5 h-3.5 text-[#C5A880] animate-pulse" />
+                <span className="font-bold text-white">{readingStats.label}</span>
+                <span className="text-[#64748B] hidden sm:inline">({readingStats.wordCount.toLocaleString()}w)</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded border font-semibold uppercase ${readingStats.depthColor} ${readingStats.depthBg} hidden md:inline`}>
+                  {readingStats.depthTier}
+                </span>
+              </div>
+            )}
+
             {/* Color Palette Selector */}
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[#141C2B] border border-[#202E44]">
               <span className="text-[10px] font-mono text-[#8C98AE] mr-1 hidden sm:inline">Color:</span>
@@ -353,9 +438,10 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
 
             {/* Download as PDF Button */}
             <button
-              onClick={handlePrintAnnotated}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#141D2C] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#C5A880] border border-[#C5A880]/30 hover:border-[#C5A880] text-xs font-semibold transition-all shadow-sm group"
-              title="Download Annotated Legal Brief as PDF (triggers print dialog)"
+              type="button"
+              onClick={() => downloadCaseBriefPdf(brief)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#141D2C] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#C5A880] border border-[#C5A880]/30 hover:border-[#C5A880] text-xs font-semibold transition-all shadow-sm group cursor-pointer"
+              title="Generate and download formatted Chambers stationery PDF"
             >
               <Download className="w-3.5 h-3.5 text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
               <span>Download as PDF</span>
@@ -382,12 +468,28 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
         </div>
 
         {/* Modal Main Area: Split Screen between Precedent Clauses & Annotation Sidebar */}
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
           
           {/* Main Legal Document Reader */}
-          <div className={`flex-1 overflow-y-auto p-4 sm:p-8 transition-colors ${
-            isIvoryMode ? 'bg-[#FAF8F5] text-[#1E2530]' : 'bg-[#06080E] text-slate-200'
-          }`}>
+          <div 
+            onScroll={handleDocumentScroll}
+            className={`flex-1 overflow-y-auto p-4 sm:p-8 transition-colors scroll-smooth ${
+              isIvoryMode ? 'bg-[#FAF8F5] text-[#1E2530]' : 'bg-[#06080E] text-slate-200'
+            }`}
+          >
+            {/* Modal Precedent Scroll Progress Sub-Bar */}
+            <div 
+              className="w-full h-[2.5px] bg-[#162030] overflow-hidden mb-6 rounded-full"
+              role="progressbar"
+              aria-valuenow={Math.round(docScrollPct)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div 
+                className="h-full bg-gradient-to-r from-[#B38F5B] via-[#C5A880] to-[#F3E3C3] shadow-[0_0_8px_#C5A880] transition-all duration-75"
+                style={{ width: `${docScrollPct}%` }}
+              />
+            </div>
             
             {/* Judicial Banner */}
             <div className={`p-6 rounded-2xl mb-8 border ${
@@ -406,15 +508,24 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
               <h2 className="text-xl sm:text-2xl font-cinzel font-bold leading-snug">
                 {brief.matterName}
               </h2>
-              <div className="mt-3 flex items-center gap-4 text-xs font-mono text-[#6A788E] flex-wrap">
+              <div className="mt-3 flex items-center gap-3 text-xs font-mono text-[#6A788E] flex-wrap">
                 <span>Value: <strong className="text-[#C5A880]">{brief.value}</strong></span>
                 <span>·</span>
                 <span>Category: {brief.clientCategory}</span>
                 <span>·</span>
-                <span className="flex items-center gap-1 text-[#C5A880]">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{brief.readTime || '4 min read'}</span>
-                </span>
+                {/* Dynamic Estimated Reading Time Indicator */}
+                {readingStats && (
+                  <div 
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-black/20 dark:bg-black/40 border border-[#C5A880]/40 text-[#E4C999]"
+                    title={`Estimated reading duration: ${readingStats.detailedLabel} (${readingStats.readingPaceNote})`}
+                  >
+                    <Clock className="w-3.5 h-3.5 text-[#C5A880]" />
+                    <span className="font-bold text-white">{readingStats.label}</span>
+                    <span className="text-[#8C98AE]">({readingStats.wordCount.toLocaleString()} words)</span>
+                    <span className="text-[#4E5C72]">·</span>
+                    <span className="text-[#DFBE82]">{readingStats.depthTier}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -481,12 +592,51 @@ export const CaseBriefAnnotationModal: React.FC<CaseBriefAnnotationModalProps> =
                       </div>
                     </div>
 
-                    {/* Clause Text */}
-                    <p className={`text-xs sm:text-sm font-serif leading-relaxed ${
-                      isIvoryMode ? 'text-[#242A35]' : 'text-[#CFD9E8]'
-                    }`}>
-                      {clause.text}
+                    {/* Clause Text (supports real-time text selection highlighting) */}
+                    <p
+                      onMouseUp={() => handleClauseTextSelection(clause.number, clause.text)}
+                      className={`text-xs sm:text-sm font-serif leading-relaxed select-text ${
+                        isIvoryMode ? 'text-[#242A35]' : 'text-[#CFD9E8]'
+                      }`}
+                    >
+                      {renderHighlightedClauseText(clause.text, clauseAnnotations)}
                     </p>
+
+                    {/* Real-Time Text Selection Action Bar */}
+                    {selectedPassage?.clauseNumber === clause.number && (
+                      <div className="mt-3 p-2.5 rounded-xl bg-[#141D2E] border border-[#C5A880]/60 flex items-center justify-between gap-3 flex-wrap shadow-lg">
+                        <span className="text-[11px] font-mono text-[#E4C999] truncate max-w-md">
+                          Selected: &ldquo;{selectedPassage.text}&rdquo;
+                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuickHighlightClause(clause.number, selectedPassage.text)
+                            }
+                            className="px-2.5 py-1 rounded-lg bg-[#C5A880] text-[#0A0E17] text-[11px] font-bold hover:brightness-110 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Highlighter className="w-3 h-3" />
+                            <span>Highlight Passage</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setComposerClauseNum(clause.number);
+                              setNewNoteQuotedText(selectedPassage.text);
+                              setNewNoteTitle(`Note on Clause ${clause.number}`);
+                              setNewNoteType('sticky-note');
+                              setIsComposingNote(true);
+                              setSelectedPassage(null);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-[#1D283D] text-[#E4C999] border border-[#C5A880]/40 text-[11px] font-semibold hover:bg-[#C5A880]/20 flex items-center gap-1 cursor-pointer"
+                          >
+                            <StickyNote className="w-3 h-3" />
+                            <span>Pin Sticky Note</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {clause.statutoryBasis && (
                       <div className="mt-3 text-[11px] font-mono text-[#8C98AE] flex items-center gap-1.5">

@@ -1,6 +1,18 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Global Theme Transitions */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition-delay: 0s !important;
+}
+
 @layer base {
   :root {
     --font-cinzel: 'Cinzel', serif;
@@ -11,12 +23,127 @@
   html {
     font-family: var(--font-sans);
     scroll-behavior: smooth;
-    color-scheme: dark light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
   }
 
   body {
-    @apply bg-[#080B11] text-[#E8EDF5] antialiased selection:bg-[#C5A880]/30 selection:text-[#E8EDF5];
+    @apply antialiased selection:bg-[#C5A880]/30 selection:text-[#E8EDF5];
+    background-color: #080B11;
+    color: #E8EDF5;
   }
+}
+
+/* ================= LIGHT MODE LUXURY PARCHMENT THEME OVERRIDES ================= */
+html.light body {
+  background-color: #FAF8F5 !important;
+  color: #151F2F !important;
+}
+
+/* Light mode backgrounds */
+html.light .bg-\[\#080B11\],
+html.light .bg-\[\#06090E\]\/95,
+html.light .bg-\[\#080B11\]\/95,
+html.light .bg-\[\#080B11\]\/90,
+html.light .bg-\[\#080B11\]\/85 {
+  background-color: #FAF8F5 !important;
+}
+
+html.light .bg-\[\#090D15\],
+html.light .bg-\[\#0A0E17\],
+html.light .bg-\[\#0A0E17\]\/98,
+html.light .bg-\[\#0D131F\],
+html.light .bg-\[\#0D1422\],
+html.light .bg-\[\#0E131E\] {
+  background-color: #FFFFFF !important;
+}
+
+html.light .bg-\[\#0F1626\],
+html.light .bg-\[\#101622\],
+html.light .bg-\[\#111724\],
+html.light .bg-\[\#111726\],
+html.light .bg-\[\#121824\],
+html.light .bg-\[\#121927\],
+html.light .bg-\[\#141C2B\],
+html.light .bg-\[\#141C2E\],
+html.light .bg-\[\#141F32\],
+html.light .bg-\[\#172132\],
+html.light .bg-\[\#182338\] {
+  background-color: #F1ECE1 !important;
+}
+
+html.light .bg-\[\#1A2334\],
+html.light .bg-\[\#1D273A\],
+html.light .bg-\[\#1F2C42\] {
+  background-color: #E8E2D5 !important;
+}
+
+/* Light mode borders */
+html.light .border-\[\#141D2B\],
+html.light .border-\[\#162030\],
+html.light .border-\[\#17202F\],
+html.light .border-\[\#1A2334\],
+html.light .border-\[\#1A2538\],
+html.light .border-\[\#1C2537\],
+html.light .border-\[\#1E283A\],
+html.light .border-\[\#1E293E\],
+html.light .border-\[\#1E2A3E\],
+html.light .border-\[\#1E2C44\],
+html.light .border-\[\#212D42\],
+html.light .border-\[\#222B3D\],
+html.light .border-\[\#222E44\],
+html.light .border-\[\#222E46\],
+html.light .border-\[\#22314B\],
+html.light .border-\[\#232F46\],
+html.light .border-\[\#233149\] {
+  border-color: #E4DCCF !important;
+}
+
+/* Light mode text colors */
+html.light .text-white {
+  color: #121A28 !important;
+}
+
+html.light .text-\[\#E8EDF5\],
+html.light .text-slate-200 {
+  color: #182335 !important;
+}
+
+html.light .text-\[\#A6B2C4\],
+html.light .text-\[\#A6B4CD\],
+html.light .text-\[\#CBD5E1\] {
+  color: #4A576D !important;
+}
+
+html.light .text-\[\#8C98AE\],
+html.light .text-\[\#7D8B9F\],
+html.light .text-\[\#7888A0\],
+html.light .text-\[\#718096\],
+html.light .text-\[\#697992\] {
+  color: #5C6A80 !important;
+}
+
+html.light .text-\[\#E4C999\],
+html.light .text-\[\#DFBE82\] {
+  color: #8C6B32 !important;
+}
+
+html.light ::-webkit-scrollbar-track {
+  background: #F1ECE1;
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: rgba(197, 168, 128, 0.45);
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 168, 128, 0.7);
 }
 
 .font-cinzel {
@@ -60,17 +187,45 @@
 
 /* Printer-ready styles for offline legal briefs, insights & monthly legal briefings */
 @media print {
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   body * {
     visibility: hidden;
   }
-  
-  #printable-document, #printable-document *,
-  #printable-briefing, #printable-briefing * {
+
+  #printable-document,
+  #printable-document * {
     visibility: visible;
   }
-  
-  #printable-document,
-  #printable-briefing {
+
+  body:not(:has(#printable-document)) #printable-briefing,
+  body:not(:has(#printable-document)) #printable-briefing * {
+    visibility: visible;
+  }
+
+  body:not(:has(#printable-document)) #printable-briefing {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  body:has(#printable-document) #printable-briefing {
+    display: none !important;
+  }
+
+  #printable-document {
     position: absolute;
     left: 0;
     top: 0;
@@ -87,6 +242,6 @@
 
   @page {
     size: A4 portrait;
-    margin: 1.2cm 1.2cm;
+    margin: 1.4cm 1.4cm;
   }
 }

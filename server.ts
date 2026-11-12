@@ -1,6 +1,6 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -61,7 +61,7 @@ Maintain a prestigious, rigorous, formal legal tone suitable for Supreme Court /
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-4-hydrogen',
           contents: prompt,
         });
         summaryText = response.text;
@@ -75,7 +75,7 @@ Maintain a prestigious, rigorous, formal legal tone suitable for Supreme Court /
     return res.json({
       summary: summaryText,
       status: 'success',
-      model: 'gemini-3.8-flash'
+      model: 'gemini-4-hydrogen'
     });
   } catch (error: any) {
     console.error('Gemini Legal Summary API Error (routing to fallback):', error.message || error);
@@ -83,6 +83,157 @@ Maintain a prestigious, rigorous, formal legal tone suitable for Supreme Court /
       summary: null,
       status: 'error_fallback',
       error: error.message || 'Gemini processing failed, routing to institutional synthesis'
+    });
+  }
+});
+
+// Server-side Gemini API Route for Landmark Case Brief Key Takeaways
+app.post('/api/case-takeaways', async (req, res) => {
+  try {
+    const { brief, language = 'en' } = req.body as {
+      brief?: {
+        id: string;
+        matterName: string;
+        clientCategory: string;
+        forum: string;
+        year: number;
+        value: string;
+        summary: string;
+        impact: string;
+      };
+      language?: 'en' | 'sw';
+    };
+
+    if (!brief || !brief.matterName) {
+      return res.status(400).json({
+        error: 'A valid landmark case brief is required to generate Key Takeaways.',
+      });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({
+        error: 'Gemini API key is not configured. Check your key in Settings > Secrets.',
+      });
+    }
+
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    });
+
+    const targetLanguageNote =
+      language === 'sw'
+        ? 'Write all JSON string values in formal legal Swahili (Kiswahili sanifu cha kisheria).'
+        : 'Write all JSON string values in authoritative, concise Kenyan/Commonwealth legal English.';
+
+    const prompt = `Analyze the following landmark case handled by Petersons Angwenyi & Associates Advocates (Nairobi, Kenya) and distill the key legal precedents established.
+
+MATTER NAME: ${brief.matterName}
+FORUM / COURT: ${brief.forum}
+YEAR: ${brief.year}
+CLIENT SECTOR: ${brief.clientCategory}
+FINANCIAL EXPOSURE: ${brief.value}
+FACTUAL SUMMARY: ${brief.summary}
+HOLDING / JUDICIAL IMPACT: ${brief.impact}
+
+Produce:
+1. A concise one-sentence doctrinal headline summarizing the overarching precedent.
+2. Between 4 and 5 concise, high-impact bullet points capturing the specific legal precedents, procedural principles, and commercial compliance rules established by this matter. Keep each bullet crisp (1-2 sentences) and anchor each bullet to a concrete Kenyan statutory provision, rule, or judicial doctrine.`;
+
+    let rawJsonText: string | undefined;
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-4-hydrogen',
+          contents: prompt,
+          config: {
+            systemInstruction: `You are a Senior Appellate Counsel and Legal Researcher summarizing Kenyan superior court and international arbitral precedents for corporate boards. ${targetLanguageNote}`,
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                headline: {
+                  type: Type.STRING,
+                  description: 'One-sentence doctrinal summary of the landmark ruling.',
+                },
+                takeaways: {
+                  type: Type.ARRAY,
+                  description: 'Concise bulleted list of 4 to 5 legal precedents established.',
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      precedentTitle: {
+                        type: Type.STRING,
+                        description: 'Short 3-6 word doctrinal heading for the bullet point.',
+                      },
+                      summaryBullet: {
+                        type: Type.STRING,
+                        description: 'Concise 1-2 sentence explanation of the precedent established.',
+                      },
+                      statutoryAnchor: {
+                        type: Type.STRING,
+                        description: 'Relevant Kenyan statute, rule, constitutional article, or convention.',
+                      },
+                    },
+                    required: ['precedentTitle', 'summaryBullet', 'statutoryAnchor'],
+                  },
+                },
+              },
+              required: ['headline', 'takeaways'],
+            },
+          },
+        });
+
+        rawJsonText = response.text?.trim();
+        if (rawJsonText) break;
+      } catch (err) {
+        lastError = err;
+        if (attempt === 2) break;
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+    }
+
+    if (!rawJsonText) {
+      const msg =
+        lastError instanceof Error
+          ? lastError.message
+          : 'Gemini failed to return a valid Key Takeaways response.';
+      return res.status(502).json({ error: msg });
+    }
+
+    const parsed = JSON.parse(rawJsonText) as {
+      headline: string;
+      takeaways: Array<{
+        precedentTitle: string;
+        summaryBullet: string;
+        statutoryAnchor: string;
+      }>;
+    };
+
+    return res.json({
+      briefId: brief.id,
+      headline: parsed.headline,
+      takeaways: Array.isArray(parsed.takeaways) ? parsed.takeaways : [],
+      generatedAt: new Date().toISOString(),
+      model: 'gemini-4-hydrogen',
+    });
+  } catch (error: any) {
+    console.error('Gemini Case Takeaways Error:', error?.message || error);
+    const statusCode =
+      typeof error?.status === 'number' && error.status >= 400 && error.status < 600
+        ? error.status
+        : 500;
+    return res.status(statusCode).json({
+      error:
+        error?.message ||
+        'Unable to generate Key Takeaways via Gemini API at this time.',
     });
   }
 });

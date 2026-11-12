@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, Globe, Search, ShieldCheck, Check, ChevronDown, Lock } from 'lucide-react';
+import { Menu, X, Globe, Search, ShieldCheck, Check, ChevronDown, Lock, Sun, BookOpen, Clock } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { useReadingProgress } from '../context/ReadingProgressContext';
 import { GlobalTimeClock } from './GlobalTimeClock';
+import { ThemeToggle } from './ThemeToggle';
 
 interface HeaderProps {
   onOpenConsultation: () => void;
@@ -17,8 +19,16 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPortal
 }) => {
   const { language, setLanguage, t } = useLanguage();
+  const { 
+    progress: longFormProgress, 
+    isLongFormActive, 
+    activeTitle, 
+    sourceType, 
+    readingMetrics 
+  } = useReadingProgress();
+
   const [isScrolled, setIsScrolled] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [pageScrollProgress, setPageScrollProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [langToast, setLangToast] = useState<string | null>(null);
@@ -33,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
       const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
       if (height > 0) {
         const scrolled = (winScroll / height) * 100;
-        setScrollProgress(Math.min(100, Math.max(0, scrolled)));
+        setPageScrollProgress(Math.min(100, Math.max(0, scrolled)));
       }
     };
 
@@ -41,6 +51,9 @@ export const Header: React.FC<HeaderProps> = ({
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Use long-form progress if reading long-form content, otherwise general page scroll
+  const activeProgress = isLongFormActive ? longFormProgress : pageScrollProgress;
 
   // Close language dropdown on outside click
   useEffect(() => {
@@ -69,25 +82,56 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 w-full max-w-full overflow-x-hidden transition-all duration-300">
-      {/* Slim Gold Scroll Progress Indicator (Long-Form Content Reading Tracker) */}
+      {/* Subtle Progress Bar at the Very Top of the Browser Window */}
       <div 
-        className="w-full h-[2.5px] sm:h-[3px] bg-[#0A0E17]/80 overflow-hidden relative"
+        className="w-full h-[2.5px] sm:h-[3px] bg-[#0A0E17]/90 overflow-hidden relative"
         role="progressbar"
-        aria-valuenow={Math.round(scrollProgress)}
+        aria-valuenow={Math.round(activeProgress)}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label="Reading and scroll progress indicator"
       >
         <div
-          className="h-full bg-gradient-to-r from-[#B38F5B] via-[#C5A880] to-[#F3E3C3] shadow-[0_0_10px_rgba(197,168,128,0.85)] transition-all duration-75 ease-out relative"
-          style={{ width: `${scrollProgress}%` }}
+          className={`h-full transition-all duration-100 ease-out relative ${
+            isLongFormActive
+              ? 'bg-gradient-to-r from-[#DFBE82] via-[#C5A880] to-[#FFF0D4] shadow-[0_0_12px_rgba(223,190,130,0.95)]'
+              : 'bg-gradient-to-r from-[#B38F5B] via-[#C5A880] to-[#F3E3C3] shadow-[0_0_8px_rgba(197,168,128,0.7)]'
+          }`}
+          style={{ width: `${activeProgress}%` }}
         >
           {/* Subtle luminous gold pip at the leading edge */}
-          {scrollProgress > 0 && (
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#FFF8E7] shadow-[0_0_8px_#C5A880] ring-1 ring-[#C5A880]/50" />
+          {activeProgress > 0 && (
+            <div className={`absolute right-0 top-1/2 -translate-y-1/2 rounded-full ${
+              isLongFormActive 
+                ? 'w-2.5 h-2.5 bg-[#FFFDF5] shadow-[0_0_10px_#DFBE82] ring-2 ring-[#C5A880]' 
+                : 'w-2 h-2 bg-[#FFF8E7] shadow-[0_0_8px_#C5A880] ring-1 ring-[#C5A880]/50'
+            }`} />
           )}
         </div>
       </div>
+
+      {/* Floating Reading Progress Telemetry Pill when reading long-form Legal Insights or Case Briefs */}
+      {isLongFormActive && (
+        <div className="absolute right-3 sm:right-6 top-[5px] z-50 pointer-events-none animate-fadeIn">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-0.5 rounded-full bg-[#0A0F1B]/95 border border-[#C5A880]/50 shadow-xl backdrop-blur-md text-[10px] font-mono text-[#E4C999]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <BookOpen className="w-3 h-3 text-[#C5A880]" />
+            <span className="text-[#C5A880] font-semibold uppercase tracking-wider hidden sm:inline">
+              {sourceType === 'insight' ? 'Reading Insight' : 
+               sourceType === 'case' ? 'Case Precedent' : 
+               sourceType === 'section-insights' ? 'Legal Insights' : 'Case Precedents'}
+            </span>
+            {readingMetrics && (
+              <>
+                <span className="text-[#56657F] hidden md:inline">·</span>
+                <span className="text-white font-medium hidden md:inline">{readingMetrics.label}</span>
+              </>
+            )}
+            <span className="text-[#56657F]">·</span>
+            <span className="text-[#DFBE82] font-bold tabular-nums">{Math.round(activeProgress)}%</span>
+          </div>
+        </div>
+      )}
 
       {/* Small, Elegant Global Time Clock Component (Nairobi HQ, London, New York) */}
       <GlobalTimeClock
@@ -285,6 +329,9 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
 
+              {/* Dark / Light Mode Toggle Component */}
+              <ThemeToggle variant="compact" />
+
               {/* Action Button 1: Secure Client Portal Button with Status Indicator */}
               <button
                 onClick={onOpenPortal || onOpenVault}
@@ -387,6 +434,15 @@ export const Header: React.FC<HeaderProps> = ({
                     {language === 'sw' && <Check className="w-3.5 h-3.5" />}
                   </button>
                 </div>
+              </div>
+
+              {/* Mobile Display Theme Control (Dark / Light / Auto) */}
+              <div className="flex items-center justify-between p-2.5 bg-[#121824] rounded-xl border border-[#222B3D] text-xs">
+                <span className="text-[#8C98AE] font-mono flex items-center gap-1.5">
+                  <Sun className="w-3.5 h-3.5 text-[#C5A880]" />
+                  <span>Display Theme:</span>
+                </span>
+                <ThemeToggle variant="segmented" className="w-48" />
               </div>
 
               {/* Navigation Links inside Drawer */}

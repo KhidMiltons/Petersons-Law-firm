@@ -47,6 +47,7 @@ export interface LegalArticle {
   synopsis: string;
   content: string[];
   citation: string;
+  shareCount: number;
 }
 
 export interface ClientTestimonial {
@@ -230,6 +231,7 @@ export const FIRM_DETAILS = {
   registryEmail: "registry@paalawkenya.com",
   hours: "Monday – Friday: 08:00 – 18:00 EAT (24/7 Urgent Injunction Duty Counsel)",
   lskRoll: "LSK Registered Law Firm Firm No. NRB/3892",
+  linkedinUrl: "https://www.linkedin.com/company/petersons-angwenyi-associates-advocates",
 };
 
 export const ADVOCATES: Advocate[] = [
@@ -509,6 +511,7 @@ export const LEGAL_ARTICLES: LegalArticle[] = [
     readTime: "6 min read",
     synopsis: "An in-depth analysis of the Sectional Properties Act 2020 transition requirements for corporate developments, sectional plans approval, and title migration onto ArdhiSasa.",
     citation: "PAA Law Review, Vol. XII, Issue 1",
+    shareCount: 184,
     content: [
       "The enactment of the Sectional Properties Act, 2020 radically reformed Kenya's residential and commercial multi-unit property regime. It mandated the conversion of all long-term sub-leases registered under repealed land statutes into sectional title deeds.",
       "For institutional investors, commercial developers, and financial institutions holding charges over mother titles, the practical implications are significant. We examine recent court decisions affirming that lack of sectional conversion does not void underlying ownership, yet strictly curtails subsequent bank charge registration.",
@@ -523,6 +526,7 @@ export const LEGAL_ARTICLES: LegalArticle[] = [
     readTime: "8 min read",
     synopsis: "Examining the judicial deference given to arbitral awards by the High Court of Kenya and recent appellate boundaries on the 'public policy' defense.",
     citation: "Kenya Commercial Law Commentary, 2025",
+    shareCount: 247,
     content: [
       "The Kenyan Judiciary has progressively solidified Nairobi's status as the pre-eminent arbitration hub of Sub-Saharan Africa. Guided by Section 35 of the Arbitration Act 1995, courts have repeatedly restrained parties from using setting-aside applications as disguised appeals.",
       "In a decisive recent Court of Appeal judgment argued by our chambers, the court reiterated that 'public policy' is an exceptional standard requiring proof of fundamental corruption, illegality, or clear violation of the Constitution of Kenya 2010.",
@@ -537,6 +541,7 @@ export const LEGAL_ARTICLES: LegalArticle[] = [
     readTime: "5 min read",
     synopsis: "Guidance for corporate boards on avoiding wrongful trading liabilities during liquidity distress and leveraging administration moratoria.",
     citation: "PAA Executive Briefing No. 44",
+    shareCount: 139,
     content: [
       "Under Section 143 of the Companies Act 2015, directors owe statutory fiduciary duties directly to the company. When an enterprise approaches insolvency, however, the target of these duties pivots significantly toward safeguarding the collective creditor pool.",
       "The Insolvency Act 2015 introduced progressive administration procedures designed to rescue viable companies as going concerns rather than defaulting straight to liquidation. We outline key precautions required when approving dividend declarations or asset disposals under contested financial conditions."

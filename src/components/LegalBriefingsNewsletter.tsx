@@ -6,9 +6,24 @@ import {
 import { useLanguage } from '../context/LanguageContext';
 import { FIRM_DETAILS } from '../data/firmData';
 
+export interface BriefingTopic {
+  id: string;
+  label: string;
+  badge: string;
+}
+
+export const BRIEFING_TOPICS: BriefingTopic[] = [
+  { id: 'corporate', label: 'Corporate Law & Governance', badge: 'Companies Act 2015' },
+  { id: 'precedents', label: 'Landmark Judicial Precedents', badge: 'Superior Courts' },
+  { id: 'arbitration', label: 'Commercial Arbitration', badge: 'NCIA & LCIA' },
+  { id: 'finance', label: 'Banking & Securities', badge: 'ARO Escrows' },
+];
+
 export const LegalBriefingsNewsletter: React.FC = () => {
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(['corporate', 'precedents', 'arbitration', 'finance']);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscribedEmail, setSubscribedEmail] = useState('');
@@ -20,15 +35,29 @@ export const LegalBriefingsNewsletter: React.FC = () => {
     try {
       const savedEmail = localStorage.getItem('paa_newsletter_email');
       const savedRef = localStorage.getItem('paa_newsletter_ref');
+      const savedTopics = localStorage.getItem('paa_newsletter_topics');
       if (savedEmail && savedRef) {
         setIsSubscribed(true);
         setSubscribedEmail(savedEmail);
         setSubscriptionRef(savedRef);
+        if (savedTopics) {
+          setSelectedTopics(JSON.parse(savedTopics));
+        }
       }
     } catch {
       // Ignore localStorage errors
     }
   }, []);
+
+  const toggleTopic = (id: string) => {
+    setSelectedTopics((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length === 1) return prev; // Keep at least one
+        return prev.filter((t) => t !== id);
+      }
+      return [...prev, id];
+    });
+  };
 
   const validateEmail = (val: string): boolean => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
@@ -49,6 +78,11 @@ export const LegalBriefingsNewsletter: React.FC = () => {
       return;
     }
 
+    if (selectedTopics.length === 0) {
+      setErrorMessage('Please select at least one legal briefing topic area.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Simulate realistic chambers registry processing
@@ -63,6 +97,7 @@ export const LegalBriefingsNewsletter: React.FC = () => {
       try {
         localStorage.setItem('paa_newsletter_email', cleanEmail);
         localStorage.setItem('paa_newsletter_ref', generatedRef);
+        localStorage.setItem('paa_newsletter_topics', JSON.stringify(selectedTopics));
       } catch {
         // Ignore storage errors
       }
@@ -82,6 +117,11 @@ export const LegalBriefingsNewsletter: React.FC = () => {
       year: 'numeric'
     });
 
+    const topicLabels = BRIEFING_TOPICS
+      .filter((t) => selectedTopics.includes(t.id))
+      .map((t) => t.label)
+      .join(', ');
+
     const content = `================================================================================
 PETERSONS ANGWENYI & ASSOCIATES ADVOCATES
 UPPER HILL CHAMBERS, 8TH FLOOR, MARA ROAD, NAIROBI
@@ -90,6 +130,7 @@ OFFICIAL LEGAL BRIEFINGS · MONTHLY CORPORATE LAW DIGEST
 
 DOCUMENT REF:        ${subscriptionRef || 'PAA-NL-2026-ED11'}
 ISSUE:               VOL. XXVII · NOVEMBER 2026 EDITION
+SUBSCRIBED TOPICS:   ${topicLabels || 'Corporate Law & Landmark Judicial Precedents'}
 TARGET AUDIENCE:     General Counsels, Corporate Secretaries & Executive Boards
 DISPATCH DATE:       ${today}
 STATUTORY CITATION:  PAA Monthly Law Review (Corporate Series) 2026
@@ -149,6 +190,7 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
     try {
       localStorage.removeItem('paa_newsletter_email');
       localStorage.removeItem('paa_newsletter_ref');
+      localStorage.removeItem('paa_newsletter_topics');
     } catch {
       // Ignore
     }
@@ -166,10 +208,10 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-[#C5A880]/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* Left Column: Editorial Kicker & Description */}
-          <div className="lg:col-span-7 space-y-3">
+          {/* Left Column: Editorial Kicker, Description & Topic Toggles */}
+          <div className="lg:col-span-6 space-y-4">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-[#C5A880]/15 border border-[#C5A880]/30 flex items-center justify-center text-[#C5A880] shrink-0">
                 <BookOpen className="w-4 h-4" />
@@ -179,30 +221,90 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
               </span>
             </div>
 
-            <h3 className="text-xl sm:text-2xl font-cinzel text-white font-bold tracking-wide">
-              {t('briefings.title')}
-            </h3>
+            <div>
+              <h3 className="text-xl sm:text-2xl font-cinzel text-white font-bold tracking-wide">
+                {t('briefings.title')}
+              </h3>
+              <p className="text-xs sm:text-sm text-[#93A1B8] leading-relaxed max-w-xl font-sans mt-1.5">
+                {t('briefings.subtitle')}
+              </p>
+            </div>
 
-            <p className="text-xs sm:text-sm text-[#93A1B8] leading-relaxed max-w-2xl font-sans">
-              {t('briefings.subtitle')}
-            </p>
+            {/* Topic Area Checkboxes for Corporate Law & Judicial Precedents */}
+            <div className="space-y-2 pt-1">
+              <span className="text-[11px] font-mono uppercase text-[#718096] block tracking-wider">
+                Select Briefing Topics:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {BRIEFING_TOPICS.map((topic) => {
+                  const isChecked = selectedTopics.includes(topic.id);
+                  return (
+                    <button
+                      key={topic.id}
+                      type="button"
+                      onClick={() => toggleTopic(topic.id)}
+                      disabled={isSubscribed}
+                      className={`p-2 rounded-xl text-left border transition-all flex items-center justify-between text-xs cursor-pointer ${
+                        isChecked
+                          ? 'bg-[#141C2B] border-[#C5A880]/50 text-white shadow-sm'
+                          : 'bg-[#0B1019] border-[#1C273B] text-[#718096] hover:border-[#2D3F5C]'
+                      }`}
+                    >
+                      <div className="truncate pr-1">
+                        <span className="font-semibold block truncate text-[11px] sm:text-xs">
+                          {topic.label}
+                        </span>
+                        <span className="text-[9px] font-mono text-[#C5A880]">
+                          {topic.badge}
+                        </span>
+                      </div>
+                      <span className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border text-[10px] ${
+                        isChecked
+                          ? 'bg-[#C5A880] border-[#C5A880] text-[#0A0E17] font-bold'
+                          : 'border-[#2D3E5B] bg-transparent'
+                      }`}>
+                        {isChecked && '✓'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-            {/* Zero-Pill Unboxed Key Feature Indicators */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[11px] text-[#718096] font-mono">
-              <span className="text-[#C5A880]">Monthly Frequency</span>
-              <span aria-hidden="true">·</span>
-              <span>First Tuesday of Month</span>
-              <span aria-hidden="true">·</span>
-              <span>Cap 80 § 134 Privileged</span>
-              <span aria-hidden="true">·</span>
-              <span>Zero Third-Party Disclosures</span>
+            {/* Zero-Pill Unboxed Key Feature Indicators & Preview Toggle Button */}
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[#1C263A]">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#718096] font-mono">
+                <span className="text-[#C5A880]">Monthly Frequency</span>
+                <span aria-hidden="true">·</span>
+                <span>Cap 80 § 134 Privileged</span>
+                <span aria-hidden="true">·</span>
+                <span>Zero Disclosures</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(!isPreviewOpen)}
+                className="text-xs text-[#C5A880] hover:text-[#DFBE82] font-mono flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <span>{isPreviewOpen ? 'Hide Edition Synopsis' : 'Preview Vol. XXVII'}</span>
+                <span className="text-xs">{isPreviewOpen ? '▲' : '▼'}</span>
+              </button>
             </div>
           </div>
 
           {/* Right Column: Interactive Subscription Form or Subscribed Badge */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-6">
             {!isSubscribed ? (
-              <form onSubmit={handleSubmit} className="space-y-3">
+              <form onSubmit={handleSubmit} className="space-y-3.5 bg-[#0C121E] p-4 sm:p-6 rounded-xl border border-[#1E2B40]">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-white block">
+                    Subscribe for Monthly Corporate Law Intelligence
+                  </label>
+                  <p className="text-[11px] text-[#8C98AE]">
+                    Dispatched to General Counsels, corporate boards, and institutional legal officers.
+                  </p>
+                </div>
+
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#75849E]">
                     <Mail className="w-4 h-4 text-[#C5A880]" />
@@ -216,7 +318,7 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
                     }}
                     disabled={isSubmitting}
                     placeholder={t('briefings.placeholder')}
-                    className="w-full pl-10 pr-4 py-3 bg-[#0D1420] border border-[#223048] focus:border-[#C5A880] focus:ring-1 focus:ring-[#C5A880] rounded-xl text-xs sm:text-sm text-white placeholder-[#5A677E] outline-none transition-all shadow-inner disabled:opacity-50"
+                    className="w-full pl-10 pr-4 py-3 bg-[#080D16] border border-[#223048] focus:border-[#C5A880] focus:ring-1 focus:ring-[#C5A880] rounded-xl text-xs sm:text-sm text-white placeholder-[#5A677E] outline-none transition-all shadow-inner disabled:opacity-50"
                     required
                   />
                 </div>
@@ -253,7 +355,7 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
                   <button
                     type="button"
                     onClick={handlePrintBriefing}
-                    className="w-full sm:w-auto py-3 px-4 rounded-xl bg-[#121B2B] hover:bg-[#1A263C] text-[#C5A880] hover:text-[#DFBE82] border border-[#C5A880]/30 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shrink-0"
+                    className="w-full sm:w-auto py-3 px-4 rounded-xl bg-[#121B2B] hover:bg-[#1A263C] text-[#C5A880] hover:text-[#DFBE82] border border-[#C5A880]/30 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                     title="Print November 2026 Legal Briefing directly using print styles"
                   >
                     <Printer className="w-4 h-4" />
@@ -268,14 +370,14 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
               </form>
             ) : (
               /* Subscribed Confirmation Card */
-              <div className="p-4 sm:p-5 rounded-xl bg-[#0D1624] border border-emerald-500/40 space-y-3 animate-fadeIn text-xs">
+              <div className="p-5 rounded-xl bg-[#0C1522] border border-emerald-500/40 space-y-3.5 animate-fadeIn text-xs shadow-xl">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-full bg-emerald-950/90 border border-emerald-500/60 flex items-center justify-center text-emerald-400 shrink-0">
-                      <CheckCircle2 className="w-4 h-4" />
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-full bg-emerald-950/90 border border-emerald-500/60 flex items-center justify-center text-emerald-400 shrink-0">
+                      <CheckCircle2 className="w-5 h-5" />
                     </span>
                     <div>
-                      <h4 className="text-white font-semibold text-xs sm:text-sm">
+                      <h4 className="text-white font-semibold text-sm">
                         {t('briefings.successTitle')}
                       </h4>
                       <p className="text-[#8C98AE] text-[11px] font-mono">
@@ -284,18 +386,21 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
                     </div>
                   </div>
                   
-                  <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 uppercase">
+                  <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 uppercase font-semibold">
                     Confirmed
                   </span>
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-[#070B12] border border-[#1C283C] text-[11px] font-mono text-[#BAC5D6] space-y-0.5">
+                <div className="p-3 rounded-lg bg-[#070B12] border border-[#1C283C] text-[11px] font-mono text-[#BAC5D6] space-y-1">
                   <div className="truncate">
                     <span className="text-[#718096]">Registered Email: </span>
                     <strong className="text-[#E4C999]">{subscribedEmail}</strong>
                   </div>
                   <div className="text-[10px] text-[#718096]">
-                    Next Edition: <span className="text-white">Vol. XXVIII - December 2026 (eTIMS &amp; Tax Review)</span>
+                    Active Portfolios: <span className="text-white">{selectedTopics.length} Areas Enrolled</span>
+                  </div>
+                  <div className="text-[10px] text-[#718096]">
+                    Next Edition: <span className="text-white">Vol. XXVIII - December 2026 (Tax Review &amp; eTIMS)</span>
                   </div>
                 </div>
 
@@ -304,7 +409,7 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
                   <button
                     type="button"
                     onClick={handlePrintBriefing}
-                    className="flex-1 py-2 px-3 bg-[#162235] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#C5A880] font-semibold rounded-lg border border-[#C5A880]/40 transition-all flex items-center justify-center gap-1.5 text-xs shadow-sm"
+                    className="flex-1 py-2 px-3 bg-[#162235] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#C5A880] font-semibold rounded-lg border border-[#C5A880]/40 transition-all flex items-center justify-center gap-1.5 text-xs shadow-sm cursor-pointer"
                     title="Print November 2026 Legal Briefing & Subscription Certificate"
                   >
                     <Printer className="w-3.5 h-3.5" />
@@ -314,7 +419,7 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
                   <button
                     type="button"
                     onClick={handleDownloadOfflineBriefing}
-                    className="py-2 px-3 bg-[#111A28] hover:bg-[#18253A] text-[#8C98AE] hover:text-white rounded-lg border border-[#202E44] transition-all flex items-center justify-center gap-1.5 text-xs"
+                    className="py-2 px-3 bg-[#111A28] hover:bg-[#18253A] text-[#8C98AE] hover:text-white rounded-lg border border-[#202E44] transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer"
                     title="Download offline plain text briefing"
                   >
                     <Download className="w-3.5 h-3.5 text-[#C5A880]" />
@@ -326,7 +431,7 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
                   <button
                     type="button"
                     onClick={handleResetSubscription}
-                    className="text-[10px] text-[#718096] hover:text-[#C5A880] underline transition-colors"
+                    className="text-[10px] text-[#718096] hover:text-[#C5A880] underline transition-colors cursor-pointer"
                   >
                     {t('briefings.subAnother')}
                   </button>
@@ -336,6 +441,54 @@ CHAMBERS CONTACT:    litigation@paalawkenya.com | Tel: ${FIRM_DETAILS.phone}
           </div>
 
         </div>
+
+        {/* Collapsible Current Issue Synopsis (Vol. XXVII) */}
+        {isPreviewOpen && (
+          <div className="mt-6 pt-6 border-t border-[#1C263A] space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase text-[#C5A880] font-semibold">
+                Vol. XXVII (November 2026) · Executive Intelligence Synopsis
+              </span>
+              <span className="text-[10px] font-mono text-[#718096]">
+                4 In-Depth Briefings
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 bg-[#070B12] rounded-xl border border-[#1A2538] space-y-1">
+                <span className="text-[10px] font-mono text-[#C5A880] block font-semibold">1. COMPANIES ACT 2015</span>
+                <h5 className="text-xs font-semibold text-white">BRS Beneficial Ownership</h5>
+                <p className="text-[11px] text-[#8C98AE] leading-relaxed">
+                  Strict enforcement under Section 93A; statutory penalties for undisclosed nominee trusts.
+                </p>
+              </div>
+
+              <div className="p-3 bg-[#070B12] rounded-xl border border-[#1A2538] space-y-1">
+                <span className="text-[10px] font-mono text-[#C5A880] block font-semibold">2. SECTIONAL PROPERTIES</span>
+                <h5 className="text-xs font-semibold text-white">ArdhiSasa Lease Conversions</h5>
+                <p className="text-[11px] text-[#8C98AE] leading-relaxed">
+                  High Court upholds mandatory conversion of long-term commercial sub-leases to sectional titles.
+                </p>
+              </div>
+
+              <div className="p-3 bg-[#070B12] rounded-xl border border-[#1A2538] space-y-1">
+                <span className="text-[10px] font-mono text-[#C5A880] block font-semibold">3. COMMERCIAL ARBITRATION</span>
+                <h5 className="text-xs font-semibold text-white">Emergency Arbitrator Relief</h5>
+                <p className="text-[11px] text-[#8C98AE] leading-relaxed">
+                  Direct judicial enforcement of NCIA conservatory awards under Section 36 of Arbitration Act.
+                </p>
+              </div>
+
+              <div className="p-3 bg-[#070B12] rounded-xl border border-[#1A2538] space-y-1">
+                <span className="text-[10px] font-mono text-[#C5A880] block font-semibold">4. STATUTORY REMUNERATION</span>
+                <h5 className="text-xs font-semibold text-white">ARO Escrow Protection</h5>
+                <p className="text-[11px] text-[#8C98AE] leading-relaxed">
+                  Segregation of advance project deposits at institutional trust facilities in Upper Hill.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
 

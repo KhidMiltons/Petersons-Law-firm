@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LanguageProvider } from './context/LanguageContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { ReadingProgressProvider } from './context/ReadingProgressContext';
 import { Header } from './components/Header';
 import { GlobalBreadcrumbs } from './components/GlobalBreadcrumbs';
 import { HeroSection } from './components/HeroSection';
@@ -122,9 +124,11 @@ export default function App() {
   };
 
   return (
-    <LanguageProvider>
-      <div className="min-h-screen bg-[#080B11] text-[#E8EDF5] flex flex-col font-sans selection:bg-[#C5A880]/30 selection:text-[#E8EDF5]">
-      {/* Top Bar Navigation */}
+    <ThemeProvider>
+      <LanguageProvider>
+        <ReadingProgressProvider>
+          <div className="min-h-screen bg-[#080B11] text-[#E8EDF5] flex flex-col font-sans selection:bg-[#C5A880]/30 selection:text-[#E8EDF5] transition-colors duration-300">
+        {/* Top Bar Navigation */}
       <Header
         onOpenConsultation={() => handleOpenConsultation()}
         onOpenVault={() => setIsVaultOpen(true)}
@@ -305,6 +309,8 @@ export default function App() {
         onOpenVault={() => setIsVaultOpen(true)}
       />
     </div>
-    </LanguageProvider>
+        </ReadingProgressProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
