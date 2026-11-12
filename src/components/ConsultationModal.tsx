@@ -21,11 +21,17 @@ import {
   Search,
   Plus,
   Bell,
-  BellRing
+  BellRing,
+  Star
 } from 'lucide-react';
 import { PRACTICE_AREAS, FIRM_DETAILS, ADVOCATES, ConsultationRecord, SAMPLE_CLIENT_MATTER } from '../data/firmData';
 import { useLanguage } from '../context/LanguageContext';
 import { LegalSpeechDictation } from './LegalSpeechDictation';
+import {
+  ClientExperienceSurvey,
+  ClientExperienceSurveyEntry,
+  getSavedClientSurveys,
+} from './ClientExperienceSurvey';
 
 interface ConsultationModalProps {
   isOpen: boolean;
@@ -109,6 +115,9 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedReference, setSubmittedReference] = useState<string | null>(null);
   const [copiedIcs, setCopiedIcs] = useState(false);
+  const [savedSurveys, setSavedSurveys] = useState<Record<string, ClientExperienceSurveyEntry>>(() =>
+    getSavedClientSurveys()
+  );
 
   // Load consultations from localStorage and SAMPLE_CLIENT_MATTER
   const [storedConsultations, setStoredConsultations] = useState<ConsultationRecord[]>(() => {
@@ -549,6 +558,20 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
               </span>
             </div>
 
+            {/* Post-Booking Client Experience Survey */}
+            <ClientExperienceSurvey
+              bookingReference={submittedReference}
+              advocateName={formData.preferredAdvocate}
+              practiceArea={formData.practiceArea}
+              clientName={formData.fullName}
+              onSubmitted={(entry) => {
+                setSavedSurveys((prev) => ({
+                  ...prev,
+                  [entry.bookingReference]: entry,
+                }));
+              }}
+            />
+
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
                 onClick={() => {
@@ -620,6 +643,15 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({
                           }`}>
                             {rec.status}
                           </span>
+                          {savedSurveys[rec.reference] && (
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#C5A880]/15 text-[#E4C999] border border-[#C5A880]/30 tabular-nums"
+                              title={savedSurveys[rec.reference].feedback || 'Client experience rating recorded'}
+                            >
+                              <Star className="w-2.5 h-2.5 fill-[#C5A880] text-[#C5A880]" />
+                              <span>{savedSurveys[rec.reference].rating}.0 / 5</span>
+                            </span>
+                          )}
                         </div>
                         <h4 className="text-sm font-semibold text-white mt-1">
                           {rec.advocateName} · <span className="text-[#C5A880]">{rec.practiceArea}</span>

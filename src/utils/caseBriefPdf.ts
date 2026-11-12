@@ -1,18 +1,145 @@
-import { jsPDF } from 'jspdf';
-import { CaseBrief, FIRM_DETAILS } from '../data/firmData';
+import { jsPDF, GState } from 'jspdf';
+import { CaseBrief, FIRM_DETAILS, PRACTICE_AREAS } from '../data/firmData';
 import { formatCaseBriefForPrint } from './printFriendly';
+
+export interface CaseBriefPdfMetadata {
+  title: string;
+  author: string;
+  subject: string;
+  keywords: string;
+  creator: string;
+  dateFormatted: string;
+  dateIso: string;
+  watermarkLabel: string;
+  docRef: string;
+}
+
+export interface GeneratedCaseBriefPdfResult {
+  fileName: string;
+  metadata: CaseBriefPdfMetadata;
+}
+
+/**
+ * Resolves the Lead Partner / Author for a given CaseBrief from firm practice portfolios.
+ */
+function resolveAuthorForBrief(brief: CaseBrief): string {
+  const practice = PRACTICE_AREAS.find((p) => p.id === brief.practiceAreaId);
+  if (practice?.leadAdvocate) {
+    return `${practice.leadAdvocate} — ${FIRM_DETAILS.name}`;
+  }
+  return `Milton Angwenyi, SC — ${FIRM_DETAILS.name}`;
+}
+
+/**
+ * Generates clean, deterministic PDF metadata (Title, Author, Date, Subject, Keywords)
+ * for embedded Adobe / OS PDF Document Properties and printed stationery records.
+ */
+export function buildCaseBriefPdfMetadata(
+  brief: CaseBrief,
+  docRef: string,
+  issuedAt: Date = new Date()
+): CaseBriefPdfMetadata {
+  const dateFormatted = issuedAt.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+  const dateIso = issuedAt.toISOString();
+  const title = `${brief.matterName} (${brief.year}) — ${docRef}`;
+  const author = resolveAuthorForBrief(brief);
+  const subject = `Landmark Judicial Precedent Brief · ${brief.forum} · ${brief.clientCategory}`;
+  const keywords = [
+    FIRM_DETAILS.shortName,
+    'Kenyan Jurisprudence',
+    brief.forum,
+    String(brief.year),
+    brief.practiceAreaId,
+    docRef,
+  ].join(', ');
+
+  return {
+    title,
+    author,
+    subject,
+    keywords,
+    creator: `${FIRM_DETAILS.name} (${FIRM_DETAILS.lskRoll})`,
+    dateFormatted,
+    dateIso,
+    watermarkLabel: `${FIRM_DETAILS.name.toUpperCase()} · PRIVILEGED PRECEDENT BRIEF`,
+    docRef,
+  };
+}
+
+/**
+ * Renders the firm cotton-stationery diagonal watermark and chambers seal emblem
+ * onto the currently selected jsPDF page without obstructing legibility.
+ */
+function applyFirmWatermark(doc: jsPDF, pageWidth: number, pageHeight: number) {
+  const centerX = pageWidth / 2;
+  const centerY = pageHeight / 2;
+
+  doc.saveGraphicsState();
+
+  // Subtle chambers circular seal rings
+  doc.setGState(new GState({ opacity: 0.05 }));
+  doc.setDrawColor(140, 107, 50);
+  doc.setLineWidth(0.75);
+  doc.circle(centerX, centerY, 48, 'S');
+  doc.setLineWidth(0.3);
+  doc.circle(centerX, centerY, 43.5, 'S');
+
+  // Primary diagonal firm watermark
+  doc.setGState(new GState({ opacity: 0.068 }));
+  doc.setFont('times', 'bold');
+  doc.setFontSize(23);
+  doc.setTextColor(140, 107, 50);
+  doc.text('PETERSONS ANGWENYI & ASSOCIATES', centerX, centerY - 2, {
+    align: 'center',
+    angle: 38,
+  });
+
+  // Secondary sub-caption watermark offset neatly below the diagonal axis
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    'ADVOCATES OF THE HIGH COURT OF KENYA  ·  NAIROBI CHAMBERS',
+    centerX + 5,
+    centerY + 7,
+    {
+      align: 'center',
+      angle: 38,
+    }
+  );
+
+  doc.restoreGraphicsState();
+}
 
 /**
  * Generates and downloads a formatted A4 PDF document for the given landmark CaseBrief
- * styled after Petersons Angwenyi & Associates Advocates' formal chambers stationery.
+ * styled after Petersons Angwenyi & Associates Advocates' formal chambers stationery,
+ * complete with auto-generated PDF metadata (Title, Author, Date) and firm watermark.
  */
-export function downloadCaseBriefPdf(brief: CaseBrief): string {
+export function downloadCaseBriefPdf(brief: CaseBrief): GeneratedCaseBriefPdfResult {
   const formatted = formatCaseBriefForPrint(brief);
+  const issuedAt = new Date();
+  const metadata = buildCaseBriefPdfMetadata(brief, formatted.meta.docRef, issuedAt);
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
   });
+
+  // Embed formal PDF document properties & creation timestamp
+  doc.setProperties({
+    title: metadata.title,
+    subject: metadata.subject,
+    author: metadata.author,
+    keywords: metadata.keywords,
+    creator: metadata.creator,
+  });
+  doc.setCreationDate(issuedAt);
 
   const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
   const pageHeight = doc.internal.pageSize.getHeight(); // 297mm
@@ -81,34 +208,48 @@ export function downloadCaseBriefPdf(brief: CaseBrief): string {
   doc.line(marginX, cursorY + 1.4, pageWidth - marginX, cursorY + 1.4);
   cursorY += 7.5;
 
-  // --- Metadata Grid Box ---
-  const boxHeight = 20;
+  // --- Auto-Generated Document Metadata Grid Box (2 rows x 3 cols) ---
+  const boxHeight = 32;
   doc.setFillColor(248, 250, 252);
   doc.setDrawColor(226, 232, 240);
   doc.setLineWidth(0.3);
   doc.roundedRect(marginX, cursorY, contentWidth, boxHeight, 1.5, 1.5, 'FD');
 
-  const colWidth = contentWidth / 4;
-  const metaItems: Array<[string, string]> = [
-    ['DOCUMENT REF', formatted.meta.docRef],
-    ['DATE GENERATED', formatted.meta.dateGenerated],
-    ['CLIENT SECTOR', brief.clientCategory],
-    ['MATTER EXPOSURE', brief.value],
+  const colWidth = contentWidth / 3;
+  const metaRows: Array<Array<[string, string]>> = [
+    [
+      ['DOCUMENT TITLE', `${brief.matterName}`],
+      ['AUTHOR / LEAD COUNSEL', metadata.author.split(' — ')[0]],
+      ['DATE ISSUED', metadata.dateFormatted],
+    ],
+    [
+      ['DOCUMENT REF', formatted.meta.docRef],
+      ['CLIENT SECTOR', brief.clientCategory],
+      ['MATTER EXPOSURE', brief.value],
+    ],
   ];
 
-  metaItems.forEach(([label, val], i) => {
-    const colX = marginX + i * colWidth + 3;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.8);
-    doc.setTextColor(100, 116, 139);
-    doc.text(label, colX, cursorY + 6.5);
+  metaRows.forEach((row, rowIdx) => {
+    const baseY = cursorY + (rowIdx === 0 ? 5.5 : 19.5);
+    row.forEach(([label, val], colIdx) => {
+      const colX = marginX + colIdx * colWidth + 3.5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.6);
+      doc.setTextColor(100, 116, 139);
+      doc.text(label, colX, baseY);
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(15, 23, 42);
-    const wrappedVal = doc.splitTextToSize(val, colWidth - 5);
-    doc.text(wrappedVal.slice(0, 2), colX, cursorY + 11.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.8);
+      doc.setTextColor(15, 23, 42);
+      const wrappedVal = doc.splitTextToSize(val, colWidth - 6);
+      doc.text(wrappedVal.slice(0, 2), colX, baseY + 4.3);
+    });
   });
+
+  // Subtle horizontal divider inside metadata grid
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.2);
+  doc.line(marginX + 3, cursorY + 15.5, pageWidth - marginX - 3, cursorY + 15.5);
 
   cursorY += boxHeight + 8;
 
@@ -165,7 +306,11 @@ export function downloadCaseBriefPdf(brief: CaseBrief): string {
     if (section.heading) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(section.isHighlight ? 140 : 15, section.isHighlight ? 107 : 23, section.isHighlight ? 50 : 42);
+      doc.setTextColor(
+        section.isHighlight ? 140 : 15,
+        section.isHighlight ? 107 : 23,
+        section.isHighlight ? 50 : 42
+      );
       doc.text(section.heading, textX, cursorY + 3);
       cursorY += 7.5;
     }
@@ -234,15 +379,17 @@ export function downloadCaseBriefPdf(brief: CaseBrief): string {
   );
   doc.text(disclaimer, marginX, cursorY);
 
-  // --- Footer Stamp Across Pages ---
+  // --- Apply Firm Watermark & Footer Stamp Across Every Page ---
   const totalPages = doc.getNumberOfPages();
   for (let p = 1; p <= totalPages; p += 1) {
     doc.setPage(p);
+    applyFirmWatermark(doc, pageWidth, pageHeight);
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `${FIRM_DETAILS.name} · ${formatted.meta.docRef}`,
+      `${FIRM_DETAILS.name} · ${formatted.meta.docRef} · ${metadata.dateFormatted}`,
       marginX,
       pageHeight - 10
     );
@@ -254,5 +401,6 @@ export function downloadCaseBriefPdf(brief: CaseBrief): string {
   const safeSlug = brief.id.replace(/[^a-z0-9-_]/gi, '_').toUpperCase();
   const fileName = `PAA_Case_Brief_${brief.year}_${safeSlug}.pdf`;
   doc.save(fileName);
-  return fileName;
+
+  return { fileName, metadata };
 }

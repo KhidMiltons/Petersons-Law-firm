@@ -26,6 +26,12 @@ import {
   getInitialShareCounts,
   incrementArticleShareCount,
 } from '../utils/shareCounter';
+import { GlossaryAnnotatedText, LegalGlossaryPanel } from './LegalGlossary';
+import {
+  extractGlossaryTermsFromTexts,
+  LEGAL_GLOSSARY_TERMS,
+  LegalGlossaryTerm,
+} from '../data/legalGlossary';
 
 interface LegalInsightsProps {
   onSelectArticle?: (article: LegalArticle | null) => void;
@@ -47,6 +53,9 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
     articleId: string;
     label: string;
   } | null>(null);
+  const [glossaryEnabled, setGlossaryEnabled] = useState<boolean>(true);
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState<boolean>(false);
+  const [focusedGlossaryTermId, setFocusedGlossaryTermId] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const feedbackTimerRef = useRef<number | null>(null);
 
@@ -278,11 +287,43 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setGlossaryEnabled((prev) => !prev)}
+              aria-pressed={glossaryEnabled}
+              className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                glossaryEnabled
+                  ? 'bg-[#F5EFE4] dark:bg-[#141D2C] text-[#8C6B32] dark:text-[#E4C999] border-[#C5A880]/60'
+                  : 'bg-white dark:bg-[#121927] text-[#5C6A80] dark:text-[#8C98AE] border-[#E4DCCF] dark:border-[#1C263A] hover:text-[#121A28] dark:hover:text-white'
+              }`}
+              title="Toggle inline Legal Glossary highlights and hover tooltip definitions"
+            >
+              <BookOpen className="w-4 h-4 shrink-0" />
+              <span>
+                {glossaryEnabled ? t('glossary.toggleOn') : t('glossary.toggleOff')}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsGlossaryOpen((prev) => !prev)}
+              aria-expanded={isGlossaryOpen}
+              className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                isGlossaryOpen
+                  ? 'bg-[#C5A880] text-[#0A0E17] border-[#C5A880] shadow-sm'
+                  : 'bg-white dark:bg-[#121927] hover:bg-[#F5EFE4] dark:hover:bg-[#162033] text-[#8C6B32] dark:text-[#C5A880] border-[#E4DCCF] dark:border-[#1C263A]'
+              }`}
+            >
+              <span>
+                {t('glossary.browse')} ({LEGAL_GLOSSARY_TERMS.length})
+              </span>
+            </button>
+
             <button
               type="button"
               onClick={handlePrintSummaryCompendium}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-[#121927] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#8C6B32] dark:text-[#C5A880] text-xs font-semibold rounded-xl border border-[#C5A880]/50 dark:border-[#C5A880]/40 hover:border-[#C5A880] transition-all shadow-sm group cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-[#121927] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#8C6B32] dark:text-[#C5A880] text-xs font-semibold rounded-xl border border-[#C5A880]/50 dark:border-[#C5A880]/40 hover:border-[#C5A880] transition-all shadow-sm group cursor-pointer whitespace-nowrap shrink-0"
               title="Print Summary of all legal insight articles using established #printable-document print styles"
             >
               <Printer className="w-4 h-4 text-[#8C6B32] dark:text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
@@ -358,6 +399,16 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
             </span>
           </div>
         </div>
+
+        {/* Interactive Legal Glossary Directory Panel */}
+        <LegalGlossaryPanel
+          isOpen={isGlossaryOpen}
+          onClose={() => {
+            setIsGlossaryOpen(false);
+            setFocusedGlossaryTermId(null);
+          }}
+          highlightedTermId={focusedGlossaryTermId}
+        />
 
         {/* 3-Column Editorial Grid or Empty State */}
         {filteredArticles.length === 0 ? (
@@ -449,7 +500,14 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
                   </h3>
 
                   <p className="mt-4 text-xs text-[#4A576D] dark:text-[#9DAABF] leading-relaxed line-clamp-4">
-                    {article.synopsis}
+                    <GlossaryAnnotatedText
+                      text={article.synopsis}
+                      enabled={glossaryEnabled}
+                      onSelectTerm={(term) => {
+                        setFocusedGlossaryTermId(term.id);
+                        setIsGlossaryOpen(true);
+                      }}
+                    />
                   </p>
 
                   {/* Citation & Subtle Share Counter Social Proof Strip */}
@@ -623,6 +681,10 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
           const modalShares = shareCounts[activeArticle.id] ?? activeArticle.shareCount;
           const modalFeedback =
             shareFeedback?.articleId === activeArticle.id ? shareFeedback.label : null;
+          const modalGlossaryTerms: LegalGlossaryTerm[] = extractGlossaryTermsFromTexts([
+            activeArticle.synopsis,
+            ...activeArticle.content,
+          ]);
 
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
@@ -724,12 +786,50 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
                     </span>
                   </div>
 
+                  {modalGlossaryTerms.length > 0 && glossaryEnabled && (
+                    <div className="p-3.5 rounded-xl bg-[#FAF8F5] dark:bg-[#111928] border border-[#E4DCCF] dark:border-[#1E2A40] space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#8C6B32] dark:text-[#C5A880]">
+                          <BookOpen className="w-3.5 h-3.5" />
+                          <span>
+                            {t('glossary.articleTermsHeader')} ({modalGlossaryTerms.length})
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-[#5C6A80] dark:text-[#8C98AE]">
+                          {t('glossary.hoverHint')}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#4A576D] dark:text-[#9BA5B7] leading-relaxed">
+                        {modalGlossaryTerms.map((term, idx) => (
+                          <React.Fragment key={term.id}>
+                            {idx > 0 && (
+                              <span aria-hidden="true" className="mx-1.5 text-[#C8BFA8] dark:text-[#3D4C63]">
+                                ·
+                              </span>
+                            )}
+                            <span className="text-[#121A28] dark:text-[#E2E8F0] font-medium">
+                              {language === 'sw' ? term.termSw : term.term}
+                            </span>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {activeArticle.content.map((paragraph, index) => (
                     <p
                       key={index}
                       className="leading-relaxed font-serif text-[15px] text-[#1D283A] dark:text-[#CFD9E8]"
                     >
-                      {paragraph}
+                      <GlossaryAnnotatedText
+                        text={paragraph}
+                        enabled={glossaryEnabled}
+                        onSelectTerm={(term) => {
+                          handleCloseArticle();
+                          setFocusedGlossaryTermId(term.id);
+                          setIsGlossaryOpen(true);
+                        }}
+                      />
                     </p>
                   ))}
 

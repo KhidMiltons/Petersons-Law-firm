@@ -23,7 +23,10 @@ import {
   formatAllCaseBriefsForPrint,
   PrintDocument,
 } from '../utils/printFriendly';
-import { downloadCaseBriefPdf } from '../utils/caseBriefPdf';
+import {
+  downloadCaseBriefPdf,
+  GeneratedCaseBriefPdfResult,
+} from '../utils/caseBriefPdf';
 import { CaseBriefAnnotationModal } from './CaseBriefAnnotationModal';
 import {
   CASE_ANNOTATIONS_UPDATED_EVENT,
@@ -71,7 +74,8 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
   const [filter, setFilter] = useState<string>('all');
   const [selectedBrief, setSelectedBrief] = useState<CaseBrief>(CASE_BRIEFS[0]);
   const [downloadedPdfId, setDownloadedPdfId] = useState<string | null>(null);
-  const [downloadedFileName, setDownloadedFileName] = useState<string>('');
+  const [downloadedPdfInfo, setDownloadedPdfInfo] =
+    useState<GeneratedCaseBriefPdfResult | null>(null);
   const [printDoc, setPrintDoc] = useState<PrintDocument | null>(null);
   const [annotatingBrief, setAnnotatingBrief] = useState<CaseBrief | null>(null);
 
@@ -133,16 +137,16 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
   const handleDownloadPdf = (brief: CaseBrief) => {
     setSelectedBrief(brief);
     if (onSelectCaseBrief) onSelectCaseBrief(brief);
-    const fileName = downloadCaseBriefPdf(brief);
+    const result = downloadCaseBriefPdf(brief);
     setDownloadedPdfId(brief.id);
-    setDownloadedFileName(fileName);
+    setDownloadedPdfInfo(result);
     if (pdfTimerRef.current) {
       window.clearTimeout(pdfTimerRef.current);
     }
     pdfTimerRef.current = window.setTimeout(() => {
       setDownloadedPdfId(null);
-      setDownloadedFileName('');
-    }, 3200);
+      setDownloadedPdfInfo(null);
+    }, 5200);
   };
 
   // Call server-side Gemini API (/api/case-takeaways) for concise bulleted precedents
@@ -585,16 +589,26 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
           )}
         </div>
 
-        {downloadedFileName && (
+        {downloadedPdfInfo && (
           <div
             role="status"
             aria-live="polite"
-            className="mb-6 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2 font-mono"
+            className="mb-6 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300 space-y-1 font-mono"
           >
-            <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span>
-              Chambers Stationery PDF generated: <strong>{downloadedFileName}</strong>
-            </span>
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+              <span>
+                Chambers Stationery PDF generated with firm watermark:{' '}
+                <strong>{downloadedPdfInfo.fileName}</strong>
+              </span>
+            </div>
+            <div className="pl-6 text-[11px] text-emerald-800/90 dark:text-emerald-200/80 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>Title: {downloadedPdfInfo.metadata.title}</span>
+              <span aria-hidden="true">·</span>
+              <span>Author: {downloadedPdfInfo.metadata.author}</span>
+              <span aria-hidden="true">·</span>
+              <span>Date: {downloadedPdfInfo.metadata.dateFormatted}</span>
+            </div>
           </div>
         )}
 
