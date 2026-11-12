@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, Globe, Search, ShieldCheck, Check, ChevronDown, Lock, Sun, BookOpen } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import React, { useState, useEffect } from 'react';
+import { Menu, X, Globe, Search, ShieldCheck, Lock, Sun, BookOpen } from 'lucide-react';
+import { useLanguage, Language } from '../context/LanguageContext';
 import { useReadingProgress } from '../context/ReadingProgressContext';
 import { GlobalTimeClock } from './GlobalTimeClock';
 import { ThemeToggle } from './ThemeToggle';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface HeaderProps {
   onOpenConsultation: () => void;
@@ -18,11 +19,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSearch,
   onOpenPortal
 }) => {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, t } = useLanguage();
   const { 
     progress: longFormProgress, 
     isLongFormActive, 
-    activeTitle, 
     sourceType, 
     readingMetrics 
   } = useReadingProgress();
@@ -30,9 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [pageScrollProgress, setPageScrollProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [langToast, setLangToast] = useState<string | null>(null);
-  const langMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,17 +52,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Use long-form progress if reading long-form content, otherwise general page scroll
   const activeProgress = isLongFormActive ? longFormProgress : pageScrollProgress;
-
-  // Close language dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
-        setLangDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Automatically close the mobile drawer at xl (>= 1280px) or on Escape key press
   useEffect(() => {
@@ -90,13 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, [mobileMenuOpen]);
 
-  const handleSwitchLanguage = (newLang: 'en' | 'sw') => {
-    if (newLang === language) {
-      setLangDropdownOpen(false);
-      return;
-    }
-    setLanguage(newLang);
-    setLangDropdownOpen(false);
+  const showLanguageNotice = (newLang: Language) => {
     const notice = newLang === 'en'
       ? 'Language set to English (Official Judicial Language)'
       : 'Lugha imebadilishwa kuwa Kiswahili (Lugha ya Kitaifa ya Jamhuri)';
@@ -201,19 +182,19 @@ export const Header: React.FC<HeaderProps> = ({
             {/* PART 1 (LEFT): Brand Wordmark Element with Heraldic Seal */}
             <a
               href="#"
-              className="font-cinzel text-xs 2xl:text-sm font-bold tracking-normal text-white whitespace-nowrap shrink-0 min-w-0 max-w-[58vw] sm:max-w-none hover:text-[#DFBE82] transition-colors flex items-center gap-2 group"
+              className="font-cinzel text-xs 2xl:text-sm font-bold tracking-normal text-white whitespace-nowrap min-w-0 shrink xl:shrink-0 hover:text-[#DFBE82] transition-colors flex items-center gap-2 group"
             >
               <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-md border border-[#C5A880]/50 bg-[#C5A880]/10 flex items-center justify-center text-[#C5A880] text-[11px] sm:text-xs font-serif font-bold whitespace-nowrap shrink-0 group-hover:border-[#C5A880] transition-colors">
                 P
               </span>
-              <span className="truncate sm:overflow-visible whitespace-nowrap">
+              <span className="truncate xl:overflow-visible whitespace-nowrap">
                 PETERSONS ANGWENYI &amp; ASSOCIATES
               </span>
             </a>
 
             {/* PART 2 (CENTER): 6 Navigation Links (Hidden below 1280px / xl into hamburger drawer) */}
             <nav
-              className="hidden xl:flex items-center gap-x-3 xl:gap-x-6 text-xs uppercase tracking-normal font-medium text-[#A6B2C4] whitespace-nowrap shrink-0"
+              className="hidden xl:inline-flex items-center gap-x-3 xl:gap-x-6 text-xs uppercase tracking-normal font-medium text-[#A6B2C4] whitespace-nowrap shrink-0"
               aria-label="Primary Navigation"
             >
               <a
@@ -255,128 +236,39 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
 
             {/* PART 3 (RIGHT): Compact Utilities, Portal, Tafuta/Search & Mobile Drawer Toggle */}
-            <div className="flex items-center gap-x-2 xl:gap-x-3 shrink-0 whitespace-nowrap">
-              {/* Language Switcher Segmented Control */}
-              <div className="relative flex items-center shrink-0" ref={langMenuRef}>
-                <div className="flex items-center p-0.5 bg-[#121824] rounded-lg border border-[#222B3D] text-[11px] font-mono shadow-inner whitespace-nowrap">
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchLanguage('en')}
-                    className={`px-1.5 py-1 rounded transition-all font-semibold whitespace-nowrap cursor-pointer ${
-                      language === 'en'
-                        ? 'bg-[#C5A880] text-[#0A0E17] shadow-sm font-bold'
-                        : 'text-[#8C98AE] hover:text-white'
-                    }`}
-                    aria-label="Switch to English (Official Court Language)"
-                    title="English (Official Court Language)"
-                  >
-                    EN
-                  </button>
+            <div className="flex items-center gap-x-3 xl:gap-x-6 shrink-0 whitespace-nowrap">
+              <div className="flex items-center gap-x-1.5 sm:gap-x-2 shrink-0 whitespace-nowrap">
+                {/* Language Switcher Segmented Control */}
+                <LanguageSwitcher variant="compact" onLanguageChange={showLanguageNotice} />
 
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchLanguage('sw')}
-                    className={`px-1.5 py-1 rounded transition-all font-semibold whitespace-nowrap cursor-pointer ${
-                      language === 'sw'
-                        ? 'bg-[#C5A880] text-[#0A0E17] shadow-sm font-bold'
-                        : 'text-[#8C98AE] hover:text-white'
-                    }`}
-                    aria-label="Badilisha kwa Kiswahili (Lugha ya Kitaifa)"
-                    title="Kiswahili (Lugha ya Kitaifa)"
-                  >
-                    SW
-                  </button>
+                {/* Dark / Light Mode Toggle */}
+                <ThemeToggle variant="compact" />
 
-                  <button
-                    type="button"
-                    onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-                    className="px-1 py-1 text-[#66768E] hover:text-white transition-colors border-l border-[#1D273B] ml-0.5 cursor-pointer"
-                    aria-label="Expand language options"
-                    title="Language options"
-                  >
-                    <ChevronDown className={`w-3 h-3 transition-transform ${langDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                </div>
+                {/* Secure Client Portal Compact Action (Full label on 2xl+, icon-only below so nav never clips) */}
+                <button
+                  type="button"
+                  onClick={onOpenPortal || onOpenVault}
+                  className="hidden sm:inline-flex items-center gap-1.5 p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-[#121927] hover:bg-[#182338] border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold text-[#E4C999] hover:text-white transition-all shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
+                  title={t('nav.clientPortal')}
+                  aria-label={t('nav.clientPortal')}
+                >
+                  <Lock className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
+                  <span className="hidden 2xl:inline whitespace-nowrap">
+                    {language === 'sw' ? 'Tovuti' : 'Portal'}
+                  </span>
+                </button>
 
-                {/* Popover Language Menu */}
-                {langDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-[#0D131F] border border-[#C5A880]/40 rounded-xl shadow-2xl py-1.5 z-50 text-xs">
-                    <div className="px-3 py-1.5 border-b border-[#1A2538] flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-[#697992]">
-                      <span className="flex items-center gap-1.5">
-                        <Globe className="w-3 h-3 text-[#C5A880]" />
-                        <span>Lugha / Language</span>
-                      </span>
-                      <span className="text-emerald-400 font-bold">LSK Cap 16</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSwitchLanguage('en')}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors cursor-pointer ${
-                        language === 'en'
-                          ? 'bg-[#C5A880]/15 text-[#E4C999] font-semibold'
-                          : 'text-[#A6B4CD] hover:bg-[#151F32] hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 font-mono text-xs text-[#C5A880] font-bold">EN</span>
-                        <div>
-                          <div className="font-semibold text-white">English</div>
-                          <div className="text-[10px] text-[#7888A0]">Official Court Language</div>
-                        </div>
-                      </div>
-                      {language === 'en' && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSwitchLanguage('sw')}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors cursor-pointer ${
-                        language === 'sw'
-                          ? 'bg-[#C5A880]/15 text-[#E4C999] font-semibold'
-                          : 'text-[#A6B4CD] hover:bg-[#151F32] hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 font-mono text-xs text-[#C5A880] font-bold">SW</span>
-                        <div>
-                          <div className="font-semibold text-white">Kiswahili</div>
-                          <div className="text-[10px] text-[#7888A0]">Lugha ya Kitaifa ya Jamhuri</div>
-                        </div>
-                      </div>
-                      {language === 'sw' && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
-                    </button>
-                  </div>
-                )}
+                {/* Secure File Vault Compact Action (Icon button on lg+, full inside mobile drawer) */}
+                <button
+                  type="button"
+                  onClick={onOpenVault}
+                  className="hidden lg:inline-flex items-center gap-1.5 p-1.5 rounded-lg bg-[#101622] hover:bg-[#162030] border border-[#1E293E] hover:border-[#C5A880]/50 text-xs font-medium text-[#A6B4CD] hover:text-white transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                  title={t('nav.secureFiles')}
+                  aria-label={t('nav.secureFiles')}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
+                </button>
               </div>
-
-              {/* Dark / Light Mode Toggle */}
-              <ThemeToggle variant="compact" />
-
-              {/* Secure Client Portal Compact Action (Full label on 2xl+, icon-only below so nav never clips) */}
-              <button
-                type="button"
-                onClick={onOpenPortal || onOpenVault}
-                className="hidden sm:inline-flex items-center gap-1.5 p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg bg-[#121927] hover:bg-[#182338] border border-[#C5A880]/40 hover:border-[#C5A880] text-xs font-semibold text-[#E4C999] hover:text-white transition-all shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
-                title={t('nav.clientPortal')}
-                aria-label={t('nav.clientPortal')}
-              >
-                <Lock className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
-                <span className="hidden 2xl:inline whitespace-nowrap">
-                  {language === 'sw' ? 'Tovuti' : 'Portal'}
-                </span>
-              </button>
-
-              {/* Secure File Vault Compact Action (Icon button on xl+, full inside mobile drawer) */}
-              <button
-                type="button"
-                onClick={onOpenVault}
-                className="hidden lg:inline-flex items-center gap-1.5 p-1.5 rounded-lg bg-[#101622] hover:bg-[#162030] border border-[#1E293E] hover:border-[#C5A880]/50 text-xs font-medium text-[#A6B4CD] hover:text-white transition-all whitespace-nowrap shrink-0 cursor-pointer"
-                title={t('nav.secureFiles')}
-                aria-label={t('nav.secureFiles')}
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
-              </button>
 
               {/* Search / "Tafuta" Trigger Button — cleanly positioned inside right edge with comfortable margin */}
               <button
@@ -390,7 +282,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden sm:inline font-sans text-xs font-medium whitespace-nowrap">
                   {t('search.triggerLabel')}
                 </span>
-                <kbd className="hidden 2xl:inline-flex items-center text-[10px] font-mono px-1.5 py-0.2 bg-[#1A2334] text-[#A6B2C4] rounded border border-[#2D3B54] shrink-0">
+                <kbd className="hidden 2xl:inline-flex items-center text-[10px] font-mono px-1.5 py-0.2 bg-[#1A2334] text-[#A6B2C4] rounded border border-[#2D3B54] whitespace-nowrap shrink-0">
                   ⌘K
                 </kbd>
               </button>
@@ -422,75 +314,34 @@ export const Header: React.FC<HeaderProps> = ({
           {mobileMenuOpen && (
             <div
               id="mobile-navigation-drawer"
-              className="xl:hidden w-full max-w-full mt-3 pt-4 border-t border-[#1C2537] bg-[#0A0E17]/98 backdrop-blur-lg p-4 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 max-h-[calc(100vh-120px)] overflow-y-auto border border-[#222E44]/80 animate-fadeIn"
+              className="xl:hidden relative w-full max-w-full mt-3 pt-4 border-t border-[#1C2537] bg-[#0A0E17]/98 backdrop-blur-lg p-4 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 max-h-[calc(100vh-120px)] overflow-y-auto border border-[#222E44]/80 animate-fadeIn"
             >
               {/* Mobile Search Quick Trigger */}
               <button
+                type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onOpenSearch();
                 }}
-                className="w-full flex items-center justify-between p-2.5 bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] rounded-lg text-xs text-[#A6B2C4] font-medium"
+                className="w-full flex items-center justify-between p-2.5 bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] rounded-lg text-xs text-[#A6B2C4] font-medium cursor-pointer"
               >
-                <span className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-[#C5A880]" />
-                  <span>{t('search.placeholder')}</span>
+                <span className="flex items-center gap-2 min-w-0">
+                  <Search className="w-4 h-4 text-[#C5A880] shrink-0" />
+                  <span className="truncate">{t('search.placeholder')}</span>
                 </span>
-                <kbd className="font-mono text-[10px] text-[#718096]">⌘K</kbd>
+                <kbd className="font-mono text-[10px] text-[#718096] shrink-0 ml-2">⌘K</kbd>
               </button>
 
-              {/* Mobile Language Switcher */}
-              <div className="flex flex-col gap-2 pb-2 border-b border-[#1C2537]">
-                <div className="flex items-center justify-between text-xs text-[#8C98AE]">
-                  <span className="flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5 text-[#C5A880]" />
-                    <span>Lugha / Language Switcher:</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-[#C5A880]">
-                    {language === 'en' ? 'English Active' : 'Kiswahili Imewashwa'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                  <button
-                    onClick={() => {
-                      handleSwitchLanguage('en');
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`py-2 px-3 rounded-lg border text-center transition-all flex items-center justify-center gap-1.5 ${
-                      language === 'en'
-                        ? 'bg-[#C5A880] text-[#0A0E17] font-bold border-[#C5A880]'
-                        : 'bg-[#121824] text-[#8C98AE] border-[#222B3D]'
-                    }`}
-                  >
-                    <span>English (EN)</span>
-                    {language === 'en' && <Check className="w-3.5 h-3.5" />}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      handleSwitchLanguage('sw');
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`py-2 px-3 rounded-lg border text-center transition-all flex items-center justify-center gap-1.5 ${
-                      language === 'sw'
-                        ? 'bg-[#C5A880] text-[#0A0E17] font-bold border-[#C5A880]'
-                        : 'bg-[#121824] text-[#8C98AE] border-[#222B3D]'
-                    }`}
-                  >
-                    <span>Kiswahili (SW)</span>
-                    {language === 'sw' && <Check className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
+              {/* Dynamic LanguageSwitcher inside Mobile Drawer */}
+              <LanguageSwitcher variant="drawer" onLanguageChange={showLanguageNotice} />
 
               {/* Mobile Display Theme Control (Dark / Light / Auto) */}
-              <div className="flex items-center justify-between p-2.5 bg-[#121824] rounded-xl border border-[#222B3D] text-xs">
-                <span className="text-[#8C98AE] font-mono flex items-center gap-1.5">
-                  <Sun className="w-3.5 h-3.5 text-[#C5A880]" />
-                  <span>Display Theme:</span>
+              <div className="flex items-center justify-between gap-2 p-2.5 bg-[#121824] rounded-xl border border-[#222B3D] text-xs">
+                <span className="text-[#8C98AE] font-mono flex items-center gap-1.5 whitespace-nowrap">
+                  <Sun className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
+                  <span className="whitespace-nowrap">Display Theme:</span>
                 </span>
-                <ThemeToggle variant="segmented" className="w-48" />
+                <ThemeToggle variant="segmented" className="w-44 sm:w-48 shrink-0" />
               </div>
 
               {/* Vertical Navigation Links inside Drawer */}
@@ -541,35 +392,37 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Secure Client Portal Link inside Drawer */}
               <button
+                type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   if (onOpenPortal) onOpenPortal();
                   else onOpenVault();
                 }}
-                className="w-full flex items-center justify-between p-2.5 bg-[#141F32] hover:bg-[#1A2842] border border-[#C5A880]/40 rounded-lg text-sm text-[#E4C999] font-medium shadow-sm"
+                className="w-full flex items-center justify-between gap-2 p-2.5 bg-[#141F32] hover:bg-[#1A2842] border border-[#C5A880]/40 rounded-lg text-sm text-[#E4C999] font-medium shadow-sm cursor-pointer"
               >
-                <span className="flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-[#C5A880]" />
-                  <span>{t('nav.clientPortal')}</span>
+                <span className="flex items-center gap-2 min-w-0">
+                  <Lock className="w-4 h-4 text-[#C5A880] shrink-0" />
+                  <span className="truncate whitespace-nowrap">{t('nav.clientPortal')}</span>
                 </span>
-                <span className="text-[10px] font-mono text-white bg-red-600 px-2 py-0.5 rounded-full font-bold animate-pulse">
+                <span className="text-[10px] font-mono text-white bg-red-600 px-2 py-0.5 rounded-full font-bold whitespace-nowrap shrink-0 animate-pulse">
                   3 ALERTS
                 </span>
               </button>
 
               {/* Secure File Sharing & Client Vault inside Drawer */}
               <button
+                type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onOpenVault();
                 }}
-                className="w-full flex items-center justify-between p-2.5 bg-[#121927] hover:bg-[#1A2438] border border-[#C5A880]/30 rounded-lg text-sm text-[#8C98AE] font-medium"
+                className="w-full flex items-center justify-between gap-2 p-2.5 bg-[#121927] hover:bg-[#1A2438] border border-[#C5A880]/30 rounded-lg text-sm text-[#8C98AE] font-medium cursor-pointer"
               >
-                <span className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#C5A880]" />
-                  <span>{t('nav.secureFiles')}</span>
+                <span className="flex items-center gap-2 min-w-0">
+                  <ShieldCheck className="w-4 h-4 text-[#C5A880] shrink-0" />
+                  <span className="truncate whitespace-nowrap">{t('nav.secureFiles')}</span>
                 </span>
-                <span className="text-[10px] font-mono text-emerald-400">256-Bit SSL</span>
+                <span className="text-[10px] font-mono text-emerald-400 whitespace-nowrap shrink-0">256-Bit SSL</span>
               </button>
 
               {/* Global Time Clock Hubs inside Mobile Menu */}
@@ -585,14 +438,31 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Primary Consultation Action CTA inside Drawer */}
               <button
+                type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onOpenConsultation();
                 }}
-                className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-[#C5A880] to-[#DFBE82] text-[#0A0E17] text-xs uppercase tracking-wider font-semibold rounded-lg text-center hover:brightness-110 transition-all shadow-md"
+                className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-[#C5A880] to-[#DFBE82] text-[#0A0E17] text-xs uppercase tracking-wider font-semibold rounded-lg text-center hover:brightness-110 transition-all shadow-md cursor-pointer"
               >
                 {t('nav.scheduleConsultation')}
               </button>
+
+              {/* Floating Search Icon Button (Pinned inside bottom-right of mobile drawer for one-tap access) */}
+              <div className="sticky bottom-1 flex justify-end pointer-events-none z-20 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenSearch();
+                  }}
+                  aria-label={`${t('search.triggerLabel')} — ${t('search.title')}`}
+                  title={`${t('search.triggerLabel')} (⌘K / Ctrl+K)`}
+                  className="pointer-events-auto w-11 h-11 rounded-full bg-gradient-to-br from-[#C5A880] to-[#DFBE82] text-[#0A0E17] shadow-[0_8px_24px_rgba(197,168,128,0.4)] ring-2 ring-[#0A0E17]/90 hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+                >
+                  <Search className="w-5 h-5 stroke-[2.25]" />
+                </button>
+              </div>
             </div>
           )}
         </div>
