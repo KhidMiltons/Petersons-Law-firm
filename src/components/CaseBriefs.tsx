@@ -291,6 +291,28 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
     }
   };
 
+  const activeList = filteredBriefs.length > 0 ? filteredBriefs : CASE_BRIEFS;
+  const currentCaseIndex = Math.max(
+    0,
+    activeList.findIndex((b) => b.id === selectedBrief.id)
+  );
+
+  const handleNavigateCase = (direction: 'prev' | 'next') => {
+    if (activeList.length <= 1) return;
+    const nextIdx =
+      direction === 'prev'
+        ? (currentCaseIndex - 1 + activeList.length) % activeList.length
+        : (currentCaseIndex + 1) % activeList.length;
+    const nextBrief = activeList[nextIdx];
+    if (nextBrief) {
+      setSelectedBrief(nextBrief);
+      setTakeawaysError(null);
+      if (onSelectCaseBrief) {
+        onSelectCaseBrief(nextBrief);
+      }
+    }
+  };
+
   const selectedAnnotations = annotationsByBrief[selectedBrief.id] || [];
   const selectedStickyCount = selectedAnnotations.filter(
     (a) => a.type === 'sticky-note'
@@ -614,7 +636,12 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
         )}
 
         {/* Vertical Historical Case Chronology Timeline synced to Selected Brief */}
-        <CaseBriefTimeline brief={selectedBrief} />
+        <CaseBriefTimeline
+          brief={selectedBrief}
+          caseIndex={currentCaseIndex}
+          totalCases={activeList.length}
+          onNavigateCase={handleNavigateCase}
+        />
 
         {/* Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

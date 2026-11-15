@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Mail,
+  Building2,
   CheckCircle2,
   Printer,
   Download,
@@ -16,22 +17,50 @@ import { FIRM_DETAILS } from '../data/firmData';
 export interface BriefingTopic {
   id: string;
   label: string;
+  labelSw: string;
   badge: string;
+  badgeSw: string;
 }
 
 export const BRIEFING_TOPICS: BriefingTopic[] = [
-  { id: 'corporate', label: 'Corporate Law & Governance', badge: 'Companies Act 2015' },
-  { id: 'precedents', label: 'Landmark Judicial Precedents', badge: 'Superior Courts' },
-  { id: 'arbitration', label: 'Commercial Arbitration', badge: 'NCIA & LCIA' },
-  { id: 'finance', label: 'Banking & Securities', badge: 'ARO Escrows' },
+  {
+    id: 'corporate',
+    label: 'Corporate Law & Governance',
+    labelSw: 'Sheria za Mashirika na Utawala',
+    badge: 'Companies Act 2015',
+    badgeSw: 'Sheria ya Makampuni 2015',
+  },
+  {
+    id: 'precedents',
+    label: 'Landmark Judicial Precedents',
+    labelSw: 'Maamuzi ya Kihistoria',
+    badge: 'Superior Courts',
+    badgeSw: 'Mahakama za Juu',
+  },
+  {
+    id: 'arbitration',
+    label: 'Commercial Arbitration',
+    labelSw: 'Usuluhishi wa Kibiashara',
+    badge: 'NCIA & LCIA',
+    badgeSw: 'NCIA & LCIA',
+  },
+  {
+    id: 'finance',
+    label: 'Banking & Securities',
+    labelSw: 'Benki na Dhamana',
+    badge: 'ARO Escrows',
+    badgeSw: 'Amana za ARO',
+  },
 ];
 
 const STORAGE_KEY_EMAIL = 'paa_briefing_sub_email';
+const STORAGE_KEY_NAME = 'paa_briefing_sub_name';
 const STORAGE_KEY_REF = 'paa_briefing_sub_ref';
 const STORAGE_KEY_TOPICS = 'paa_briefing_sub_topics';
 
 export const LegalBriefingSubscription: React.FC = () => {
   const { language, t } = useLanguage();
+  const [subscriberName, setSubscriberName] = useState('');
   const [email, setEmail] = useState('');
   const [selectedTopics, setSelectedTopics] = useState<string[]>([
     'corporate',
@@ -42,19 +71,22 @@ export const LegalBriefingSubscription: React.FC = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribedName, setSubscribedName] = useState('');
   const [subscribedEmail, setSubscribedEmail] = useState('');
   const [subscriptionRef, setSubscriptionRef] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Restore persisted mock subscription if user previously subscribed
+  // Restore persisted newsletter subscription if user previously registered
   useEffect(() => {
     try {
       const savedEmail = localStorage.getItem(STORAGE_KEY_EMAIL) || localStorage.getItem('paa_newsletter_email');
+      const savedName = localStorage.getItem(STORAGE_KEY_NAME) || '';
       const savedRef = localStorage.getItem(STORAGE_KEY_REF) || localStorage.getItem('paa_newsletter_ref');
       const savedTopics = localStorage.getItem(STORAGE_KEY_TOPICS) || localStorage.getItem('paa_newsletter_topics');
       if (savedEmail && savedRef) {
         setIsSubscribed(true);
         setSubscribedEmail(savedEmail);
+        setSubscribedName(savedName);
         setSubscriptionRef(savedRef);
         if (savedTopics) {
           const parsed = JSON.parse(savedTopics);
@@ -72,7 +104,7 @@ export const LegalBriefingSubscription: React.FC = () => {
     if (isSubscribed || isSubmitting) return;
     setSelectedTopics((prev) => {
       if (prev.includes(id)) {
-        if (prev.length === 1) return prev; // Keep at least 1 selected
+        if (prev.length === 1) return prev;
         return prev.filter((item) => item !== id);
       }
       return [...prev, id];
@@ -106,29 +138,37 @@ export const LegalBriefingSubscription: React.FC = () => {
     setErrorMessage(null);
     setIsSubmitting(true);
     const cleanEmail = email.trim();
+    const cleanName = subscriberName.trim();
 
-    // Mock asynchronous API registration delay
     setTimeout(() => {
       const generatedRef = `PAA-BRF-2026-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
       setIsSubmitting(false);
       setIsSubscribed(true);
       setSubscribedEmail(cleanEmail);
+      setSubscribedName(cleanName);
       setSubscriptionRef(generatedRef);
       setEmail('');
+      setSubscriberName('');
 
       try {
         localStorage.setItem(STORAGE_KEY_EMAIL, cleanEmail);
+        if (cleanName) {
+          localStorage.setItem(STORAGE_KEY_NAME, cleanName);
+        } else {
+          localStorage.removeItem(STORAGE_KEY_NAME);
+        }
         localStorage.setItem(STORAGE_KEY_REF, generatedRef);
         localStorage.setItem(STORAGE_KEY_TOPICS, JSON.stringify(selectedTopics));
       } catch {
         // Ignore storage errors
       }
-    }, 650);
+    }, 600);
   };
 
   const handleResetSubscription = () => {
     try {
       localStorage.removeItem(STORAGE_KEY_EMAIL);
+      localStorage.removeItem(STORAGE_KEY_NAME);
       localStorage.removeItem(STORAGE_KEY_REF);
       localStorage.removeItem(STORAGE_KEY_TOPICS);
       localStorage.removeItem('paa_newsletter_email');
@@ -139,6 +179,7 @@ export const LegalBriefingSubscription: React.FC = () => {
     }
     setIsSubscribed(false);
     setSubscribedEmail('');
+    setSubscribedName('');
     setSubscriptionRef('');
     setErrorMessage(null);
   };
@@ -162,7 +203,7 @@ export const LegalBriefingSubscription: React.FC = () => {
     const content = `================================================================================
 PETERSONS ANGWENYI & ASSOCIATES ADVOCATES
 UPPER HILL CHAMBERS, 8TH FLOOR, MARA ROAD, NAIROBI
-LEGAL BRIEFING SUBSCRIPTION · MONTHLY CORPORATE LAW DIGEST
+LEGAL BRIEFING NEWSLETTER · MONTHLY CORPORATE LAW UPDATES
 ================================================================================
 
 SUBSCRIPTION REF:    ${subscriptionRef || 'PAA-BRF-2026-ED11'}
@@ -173,7 +214,7 @@ ADVOCATE ROLL:       ${FIRM_DETAILS.lskRoll}
 PRIVILEGE STATUS:    Section 134 Evidence Act (Cap 80) Privilege Enforced
 
 --------------------------------------------------------------------------------
-MONTHLY LEGAL UPDATES SUMMARY (NOVEMBER 2026)
+MONTHLY CORPORATE LAW UPDATES SUMMARY (NOVEMBER 2026)
 --------------------------------------------------------------------------------
 
 1. COMPANIES ACT 2015: BENEFICIAL OWNERSHIP REGISTRATION (BRS)
@@ -194,7 +235,7 @@ MONTHLY LEGAL UPDATES SUMMARY (NOVEMBER 2026)
    strictly segregated under the Advocates (Accounts) Rules.
 
 --------------------------------------------------------------------------------
-SUBSCRIBER RECORD:   ${subscribedEmail || 'Institutional Counsel'}
+SUBSCRIBER RECORD:   ${subscribedName ? `${subscribedName} <${subscribedEmail}>` : subscribedEmail || 'Institutional Counsel'}
 STATUS:              ACTIVE · MONTHLY DISPATCH CONFIRMED
 CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
 ================================================================================`;
@@ -229,8 +270,8 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
               </div>
               <span className="text-[11px] font-mono uppercase tracking-widest text-[#8C6D3B] dark:text-[#C5A880] font-semibold">
                 {language === 'sw'
-                  ? 'Taarifa za Kisheria za Kila Mwezi · Dawati la Utafiti'
-                  : 'Monthly Legal Updates · Chambers Research Desk'}
+                  ? 'Taarifa za Sheria za Mashirika za Kila Mwezi · Dawati la Utafiti'
+                  : 'Monthly Corporate Law Updates · Chambers Research Desk'}
               </span>
             </div>
 
@@ -239,7 +280,9 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                 id="legal-briefing-subscription-heading"
                 className="text-xl sm:text-2xl font-cinzel text-[#121A28] dark:text-white font-bold tracking-wide"
               >
-                {language === 'sw' ? 'Usajili wa Taarifa za Kisheria' : 'Legal Briefing Subscription'}
+                {language === 'sw'
+                  ? 'Jarida la Taarifa za Kisheria'
+                  : 'Legal Briefing Newsletter'}
               </h3>
               <p className="text-xs sm:text-sm text-[#4A576D] dark:text-[#93A1B8] leading-relaxed max-w-xl font-sans mt-1.5">
                 {t('briefings.subtitle')}
@@ -260,6 +303,7 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                       type="button"
                       onClick={() => toggleTopic(topic.id)}
                       disabled={isSubscribed || isSubmitting}
+                      aria-pressed={isChecked}
                       className={`p-2.5 rounded-xl text-left border transition-all flex items-center justify-between text-xs ${
                         isSubscribed ? 'opacity-80 cursor-default' : 'cursor-pointer'
                       } ${
@@ -270,10 +314,10 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                     >
                       <div className="truncate pr-2">
                         <span className="font-semibold block truncate text-[11px] sm:text-xs">
-                          {topic.label}
+                          {language === 'sw' ? topic.labelSw : topic.label}
                         </span>
                         <span className="text-[9px] font-mono text-[#8C6D3B] dark:text-[#C5A880]">
-                          {topic.badge}
+                          {language === 'sw' ? topic.badgeSw : topic.badge}
                         </span>
                       </div>
                       <span
@@ -294,31 +338,46 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
             {/* Metadata Strip & Synopsis Preview Toggle */}
             <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[#E4DCCF] dark:border-[#1C263A]">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#5C6A80] dark:text-[#718096] font-mono">
-                <span className="text-[#8C6D3B] dark:text-[#C5A880] font-semibold">Monthly Dispatch</span>
+                <span className="text-[#8C6D3B] dark:text-[#C5A880] font-semibold">
+                  {language === 'sw' ? 'Toleo la Kila Mwezi' : 'Monthly Dispatch'}
+                </span>
                 <span aria-hidden="true">·</span>
-                <span>Cap 80 § 134 Privileged</span>
+                <span>
+                  {language === 'sw' ? 'Usiri wa Sura ya 80 § 134' : 'Cap 80 § 134 Privileged'}
+                </span>
                 <span aria-hidden="true">·</span>
-                <span>Unsubscribe Anytime</span>
+                <span>
+                  {language === 'sw' ? 'Jiondoe Wakati Wowote' : 'Unsubscribe Anytime'}
+                </span>
               </div>
 
               <button
                 type="button"
                 onClick={() => setIsPreviewOpen((prev) => !prev)}
+                aria-expanded={isPreviewOpen}
                 className="text-xs text-[#8C6D3B] dark:text-[#C5A880] hover:underline font-mono flex items-center gap-1 cursor-pointer transition-colors"
               >
-                <span>{isPreviewOpen ? 'Hide Issue Preview' : 'Preview Vol. XXVII'}</span>
+                <span>
+                  {isPreviewOpen
+                    ? language === 'sw'
+                      ? 'Ficha Muhtasari'
+                      : 'Hide Issue Preview'
+                    : language === 'sw'
+                      ? 'Hakiki Toleo la XXVII'
+                      : 'Preview Vol. XXVII'}
+                </span>
                 <span className="text-[10px]">{isPreviewOpen ? '▲' : '▼'}</span>
               </button>
             </div>
           </div>
 
-          {/* Bottom / Right Block: Email Sign-up Form with Validation OR Mock Success State */}
+          {/* Bottom / Right Block: Newsletter Registration Form OR Confirmation Card */}
           <div className="md:col-span-6 xl:col-span-1">
             {!isSubscribed ? (
               <form
                 onSubmit={handleSubmit}
                 noValidate
-                className="space-y-4 bg-white dark:bg-[#0C121E] p-5 sm:p-6 rounded-xl border border-[#E4DCCF] dark:border-[#1E2B40] shadow-lg"
+                className="space-y-3.5 bg-white dark:bg-[#0C121E] p-5 sm:p-6 rounded-xl border border-[#E4DCCF] dark:border-[#1E2B40] shadow-lg"
               >
                 <div className="space-y-1">
                   <label
@@ -326,14 +385,43 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                     className="text-xs sm:text-sm font-semibold text-[#121A28] dark:text-white block"
                   >
                     {language === 'sw'
-                      ? 'Pokea Taarifa za Kisheria za Kila Mwezi'
-                      : 'Sign Up for Monthly Legal Updates'}
+                      ? 'Jiunge Kupokea Taarifa za Kila Mwezi za Sheria za Mashirika'
+                      : 'Register for Monthly Corporate Law Updates'}
                   </label>
                   <p className="text-[11px] text-[#5C6A80] dark:text-[#8C98AE]">
-                    Dispatched on the first Tuesday of every month to general counsels, legal teams, and executives.
+                    {language === 'sw'
+                      ? 'Hutumwa Jumanne ya kwanza ya kila mwezi kwa washauri wa sheria, timu za kisheria na wakurugenzi.'
+                      : 'Dispatched on the first Tuesday of every month to general counsels, legal teams, and executives.'}
                   </p>
                 </div>
 
+                {/* Optional Subscriber Name / Corporate Entity */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Building2 className="w-4 h-4 text-[#8C6D3B] dark:text-[#C5A880]" />
+                  </div>
+                  <input
+                    id="briefing-subscription-entity"
+                    type="text"
+                    autoComplete="organization"
+                    value={subscriberName}
+                    onChange={(e) => setSubscriberName(e.target.value)}
+                    disabled={isSubmitting}
+                    aria-label={
+                      language === 'sw'
+                        ? 'Jina au Shirika (Si lazima)'
+                        : 'Full Name or Corporate Entity (Optional)'
+                    }
+                    placeholder={
+                      language === 'sw'
+                        ? 'Jina au Shirika (si lazima)'
+                        : 'Full name or corporate entity (optional)'
+                    }
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#FAF8F5] dark:bg-[#080D16] border border-[#D9CEBC] dark:border-[#223048] focus:border-[#C5A880] focus:ring-1 focus:ring-[#C5A880] rounded-xl text-xs sm:text-sm text-[#121A28] dark:text-white placeholder-[#7A8699] dark:placeholder-[#5A677E] outline-none transition-all shadow-inner disabled:opacity-50"
+                  />
+                </div>
+
+                {/* Required Corporate Email */}
                 <div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -344,6 +432,7 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                       type="email"
                       inputMode="email"
                       autoComplete="email"
+                      required
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
@@ -398,10 +487,14 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                     type="button"
                     onClick={handlePrintBriefing}
                     className="w-full sm:w-auto py-3 px-4 rounded-xl bg-[#F4EFE4] dark:bg-[#121B2B] hover:bg-[#EAE2D2] dark:hover:bg-[#1A263C] text-[#8C6D3B] dark:text-[#C5A880] border border-[#DFD4C1] dark:border-[#C5A880]/30 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer whitespace-nowrap"
-                    title="Print current Legal Briefing using clean A4 print styles"
+                    title={
+                      language === 'sw'
+                        ? 'Chapa toleo la sasa la Legal Briefing kwa muundo safi wa A4'
+                        : 'Print current Legal Briefing using clean A4 print styles'
+                    }
                   >
                     <Printer className="w-4 h-4" />
-                    <span>Print Legal Briefing</span>
+                    <span>{language === 'sw' ? 'Chapa Taarifa' : 'Print Legal Briefing'}</span>
                   </button>
                 </div>
 
@@ -411,7 +504,7 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                 </div>
               </form>
             ) : (
-              /* Mock Success State Confirmation Card */
+              /* Confirmation Card */
               <div
                 role="status"
                 aria-live="polite"
@@ -427,13 +520,13 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                         {t('briefings.successTitle')}
                       </h4>
                       <p className="text-[#5C6A80] dark:text-[#8C98AE] text-[11px] font-mono">
-                        {subscriptionRef} · Chambers Distribution List
+                        {subscriptionRef} · {language === 'sw' ? 'Orodha ya Usambazaji' : 'Chambers Distribution List'}
                       </p>
                     </div>
                   </div>
 
                   <span className="px-2.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-500/40 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 uppercase font-bold">
-                    Subscribed
+                    {language === 'sw' ? 'Umesajiliwa' : 'Subscribed'}
                   </span>
                 </div>
 
@@ -442,20 +535,37 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                 </p>
 
                 <div className="p-3.5 rounded-lg bg-[#FAF8F5] dark:bg-[#070B12] border border-[#E4DCCF] dark:border-[#1C283C] text-[11px] font-mono text-[#4A576D] dark:text-[#BAC5D6] space-y-1.5">
+                  {subscribedName && (
+                    <div className="truncate">
+                      <span className="text-[#718096]">
+                        {language === 'sw' ? 'Mpokeaji / Shirika: ' : 'Subscriber / Entity: '}
+                      </span>
+                      <strong className="text-[#121A28] dark:text-white">{subscribedName}</strong>
+                    </div>
+                  )}
                   <div className="truncate">
-                    <span className="text-[#718096]">Subscriber Email: </span>
+                    <span className="text-[#718096]">
+                      {language === 'sw' ? 'Barua Pepe: ' : 'Subscriber Email: '}
+                    </span>
                     <strong className="text-[#8C6D3B] dark:text-[#E4C999]">{subscribedEmail}</strong>
                   </div>
                   <div>
-                    <span className="text-[#718096]">Selected Portfolios: </span>
+                    <span className="text-[#718096]">
+                      {language === 'sw' ? 'Mada Zilizochaguliwa: ' : 'Selected Portfolios: '}
+                    </span>
                     <span className="text-[#121A28] dark:text-white font-semibold">
-                      {selectedTopics.length} Legal Practice Desks
+                      {selectedTopics.length}{' '}
+                      {language === 'sw' ? 'Vitengo vya Kisheria' : 'Legal Practice Desks'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[#718096]">Next Issue: </span>
+                    <span className="text-[#718096]">
+                      {language === 'sw' ? 'Toleo Lijalo: ' : 'Next Issue: '}
+                    </span>
                     <span className="text-[#121A28] dark:text-white">
-                      Vol. XXVIII — December 2026 (Tax Procedures &amp; eTIMS Compliance)
+                      {language === 'sw'
+                        ? 'Toleo XXVIII — Desemba 2026 (Taratibu za Kodi na eTIMS)'
+                        : 'Vol. XXVIII — December 2026 (Tax Procedures & eTIMS Compliance)'}
                     </span>
                   </div>
                 </div>
@@ -466,10 +576,14 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                     type="button"
                     onClick={handlePrintBriefing}
                     className="flex-1 py-2.5 px-3 bg-[#F4EFE4] dark:bg-[#162235] hover:bg-[#C5A880] text-[#8C6D3B] dark:text-[#C5A880] hover:text-[#0A0E17] font-semibold rounded-lg border border-[#C5A880]/40 transition-all flex items-center justify-center gap-1.5 text-xs shadow-sm cursor-pointer whitespace-nowrap"
-                    title="Print subscription materials & briefing on clean A4 paper"
+                    title={
+                      language === 'sw'
+                        ? 'Chapa kumbukumbu ya usajili na taarifa kwa karatasi ya A4'
+                        : 'Print subscription materials & briefing on clean A4 paper'
+                    }
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    <span>Print Legal Briefing</span>
+                    <span>{language === 'sw' ? 'Chapa Taarifa' : 'Print Legal Briefing'}</span>
                   </button>
 
                   <button
@@ -478,7 +592,9 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                     className="py-2.5 px-3 bg-[#FAF8F5] dark:bg-[#111A28] hover:bg-[#EAE2D2] dark:hover:bg-[#18253A] text-[#4A576D] dark:text-[#8C98AE] hover:text-[#121A28] dark:hover:text-white rounded-lg border border-[#E4DCCF] dark:border-[#202E44] transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5 text-[#8C6D3B] dark:text-[#C5A880]" />
-                    <span className="hidden sm:inline">Offline Copy (.txt)</span>
+                    <span className="hidden sm:inline">
+                      {language === 'sw' ? 'Nakala ya Nje (.txt)' : 'Offline Copy (.txt)'}
+                    </span>
                   </button>
                 </div>
 
@@ -501,10 +617,12 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
           <div className="mt-6 pt-6 border-t border-[#E4DCCF] dark:border-[#1C263A] space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono uppercase text-[#8C6D3B] dark:text-[#C5A880] font-semibold">
-                Vol. XXVII (November 2026) · Executive Intelligence Synopsis
+                {language === 'sw'
+                  ? 'Toleo XXVII (Novemba 2026) · Muhtasari wa Taarifa za Kisheria'
+                  : 'Vol. XXVII (November 2026) · Executive Intelligence Synopsis'}
               </span>
               <span className="text-[10px] font-mono text-[#5C6A80] dark:text-[#718096]">
-                4 In-Depth Briefings
+                {language === 'sw' ? 'Taarifa 4 za Kina' : '4 In-Depth Briefings'}
               </span>
             </div>
 
@@ -514,10 +632,12 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                   1. COMPANIES ACT 2015
                 </span>
                 <h5 className="text-xs font-semibold text-[#121A28] dark:text-white">
-                  BRS Beneficial Ownership
+                  {language === 'sw' ? 'Usajili wa Wamiliki Halisi (BRS)' : 'BRS Beneficial Ownership'}
                 </h5>
                 <p className="text-[11px] text-[#4A576D] dark:text-[#8C98AE] leading-relaxed">
-                  Strict enforcement under Section 93A; statutory penalties for undisclosed nominee trusts.
+                  {language === 'sw'
+                    ? 'Utekelezaji mkali chini ya Kifungu 93A; faini kwa kutowasilisha taarifa za amana.'
+                    : 'Strict enforcement under Section 93A; statutory penalties for undisclosed nominee trusts.'}
                 </p>
               </div>
 
@@ -526,10 +646,12 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                   2. SECTIONAL PROPERTIES
                 </span>
                 <h5 className="text-xs font-semibold text-[#121A28] dark:text-white">
-                  ArdhiSasa Lease Conversions
+                  {language === 'sw' ? 'Ubadilishaji wa Hati ArdhiSasa' : 'ArdhiSasa Lease Conversions'}
                 </h5>
                 <p className="text-[11px] text-[#4A576D] dark:text-[#8C98AE] leading-relaxed">
-                  High Court upholds mandatory conversion of long-term commercial sub-leases to sectional titles.
+                  {language === 'sw'
+                    ? 'Mahakama Kuu imesisitiza kubadilishwa kwa mikataba ya muda mrefu kuwa hati miliki za sehemu.'
+                    : 'High Court upholds mandatory conversion of long-term commercial sub-leases to sectional titles.'}
                 </p>
               </div>
 
@@ -538,10 +660,12 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                   3. COMMERCIAL ARBITRATION
                 </span>
                 <h5 className="text-xs font-semibold text-[#121A28] dark:text-white">
-                  Emergency Arbitrator Relief
+                  {language === 'sw' ? 'Amri za Msuluhishi wa Dharura' : 'Emergency Arbitrator Relief'}
                 </h5>
                 <p className="text-[11px] text-[#4A576D] dark:text-[#8C98AE] leading-relaxed">
-                  Direct judicial enforcement of NCIA conservatory awards under Section 36 of Arbitration Act.
+                  {language === 'sw'
+                    ? 'Utekelezaji wa moja kwa moja wa amri za NCIA chini ya Kifungu 36 cha Sheria ya Usuluhishi.'
+                    : 'Direct judicial enforcement of NCIA conservatory awards under Section 36 of Arbitration Act.'}
                 </p>
               </div>
 
@@ -550,10 +674,12 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
                   4. STATUTORY REMUNERATION
                 </span>
                 <h5 className="text-xs font-semibold text-[#121A28] dark:text-white">
-                  ARO Escrow Protection
+                  {language === 'sw' ? 'Ulinzi wa Akaunti za Amana (ARO)' : 'ARO Escrow Protection'}
                 </h5>
                 <p className="text-[11px] text-[#4A576D] dark:text-[#8C98AE] leading-relaxed">
-                  Segregation of advance project deposits at institutional trust facilities in Upper Hill.
+                  {language === 'sw'
+                    ? 'Utenganishaji wa fedha za miradi katika akaunti rasmi za amana Upper Hill.'
+                    : 'Segregation of advance project deposits at institutional trust facilities in Upper Hill.'}
                 </p>
               </div>
             </div>
@@ -596,7 +722,12 @@ CONTACT:             ${FIRM_DETAILS.email} | Tel: ${FIRM_DETAILS.phone}
 
         <div className="border border-dashed border-slate-600 p-2.5 mb-4 text-[10px] font-mono bg-slate-100 flex flex-wrap items-center justify-between gap-2">
           <span>
-            SUBSCRIBER RECORD: <strong>{subscribedEmail || 'Institutional Counsel / Corporate Board Subscriber'}</strong>
+            SUBSCRIBER RECORD:{' '}
+            <strong>
+              {subscribedName
+                ? `${subscribedName} (${subscribedEmail})`
+                : subscribedEmail || 'Institutional Counsel / Corporate Board Subscriber'}
+            </strong>
           </span>
           <span>
             PORTFOLIOS: <strong>{BRIEFING_TOPICS.filter((topic) => selectedTopics.includes(topic.id)).map((topic) => topic.label).join(', ')}</strong>

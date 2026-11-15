@@ -4,12 +4,15 @@ export interface ReadingTimeResult {
   minutes: number;
   wordCount: number;
   label: string;
+  labelSw: string;
   detailedLabel: string;
+  detailedLabelSw: string;
   depthTier: 'Executive Brief' | 'Standard Advisory' | 'Comprehensive Dossier';
   depthTierSw: string;
   depthColor: string;
   depthBg: string;
   readingPaceNote: string;
+  readingPaceNoteSw: string;
 }
 
 /**
@@ -76,20 +79,35 @@ export function calculateReadingTime(
   }
 
   const label = `${minutes} min read`;
+  const labelSw = `dakika ${minutes} za kusoma`;
   const detailedLabel = `${minutes} min read (${wordCount.toLocaleString()} words)`;
+  const detailedLabelSw = `dakika ${minutes} za kusoma (maneno ${wordCount.toLocaleString()})`;
   const readingPaceNote = `@ ${wordsPerMinute} wpm legal benchmark`;
+  const readingPaceNoteSw = `@ maneno ${wordsPerMinute}/dakika`;
 
   return {
     minutes,
     wordCount,
     label,
+    labelSw,
     detailedLabel,
+    detailedLabelSw,
     depthTier,
     depthTierSw,
     depthColor,
     depthBg,
-    readingPaceNote
+    readingPaceNote,
+    readingPaceNoteSw
   };
+}
+
+/**
+ * Estimates remaining reading minutes from total reading minutes and scroll completion percentage (0-100).
+ */
+export function calculateRemainingMinutes(totalMinutes: number, scrollPct: number): number {
+  const clampedPct = Math.min(100, Math.max(0, scrollPct));
+  if (clampedPct >= 95) return 0;
+  return Math.max(1, Math.ceil(totalMinutes * (1 - clampedPct / 100)));
 }
 
 /**

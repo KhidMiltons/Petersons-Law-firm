@@ -14,7 +14,11 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useReadingProgress } from '../context/ReadingProgressContext';
-import { calculateArticleReadingTime } from '../utils/readingTime';
+import {
+  calculateArticleReadingTime,
+  calculateRemainingMinutes,
+  ReadingTimeResult,
+} from '../utils/readingTime';
 import { PrintFriendlyModal } from './PrintFriendlyModal';
 import {
   formatLegalInsightForPrint,
@@ -89,6 +93,23 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
         .every((token) => haystack.includes(token));
     });
   }, [searchQuery, selectedCategory]);
+
+  const readingStatsById = useMemo<Record<string, ReadingTimeResult>>(() => {
+    const map: Record<string, ReadingTimeResult> = {};
+    LEGAL_ARTICLES.forEach((article) => {
+      map[article.id] = calculateArticleReadingTime(article);
+    });
+    return map;
+  }, []);
+
+  const totalFilteredMinutes = useMemo(
+    () =>
+      filteredArticles.reduce(
+        (sum, article) => sum + (readingStatsById[article.id]?.minutes ?? 1),
+        0
+      ),
+    [filteredArticles, readingStatsById]
+  );
 
   // Keep share counters synced across components & browser tabs
   useEffect(() => {
@@ -394,8 +415,8 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
 
             <span className="text-[11px] font-mono text-[#5C6A80] dark:text-[#8C98AE] whitespace-nowrap tabular-nums">
               {language === 'sw'
-                ? `${filteredArticles.length} kati ya ${LEGAL_ARTICLES.length}`
-                : `${filteredArticles.length} of ${LEGAL_ARTICLES.length} articles`}
+                ? `${filteredArticles.length} kati ya ${LEGAL_ARTICLES.length} · ~dak ${totalFilteredMinutes}`
+                : `${filteredArticles.length} of ${LEGAL_ARTICLES.length} articles · ~${totalFilteredMinutes} min total`}
             </span>
           </div>
         </div>
@@ -431,7 +452,8 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
         ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {filteredArticles.map((article) => {
-            const readingStats = calculateArticleReadingTime(article);
+            const readingStats =
+              readingStatsById[article.id] ?? calculateArticleReadingTime(article);
             const currentShares = shareCounts[article.id] ?? article.shareCount;
             const isShareMenuOpen = openShareMenuId === article.id;
             const activeFeedback =
@@ -472,14 +494,18 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
                   <div className="mb-4 flex items-center gap-2 flex-wrap">
                     <div
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5EFE4] dark:bg-[#141C2B] border border-[#E4DCCF] dark:border-[#233148] hover:border-[#C5A880]/40 text-xs font-mono text-[#8C6B32] dark:text-[#E4C999] shadow-sm transition-colors"
-                      title={`Calculated from ${readingStats.wordCount.toLocaleString()} words (${readingStats.readingPaceNote})`}
+                      title={
+                        language === 'sw'
+                          ? `Imehesabiwa kutoka maneno ${readingStats.wordCount.toLocaleString()} (${readingStats.readingPaceNoteSw})`
+                          : `Calculated from ${readingStats.wordCount.toLocaleString()} words (${readingStats.readingPaceNote})`
+                      }
                     >
                       <Clock className="w-3.5 h-3.5 text-[#8C6B32] dark:text-[#C5A880] shrink-0" />
                       <span className="text-[10px] uppercase tracking-wider text-[#6F7A8F] dark:text-[#8C98AE]">
                         {t('insights.readTimePrefix')}:
                       </span>
                       <span className="font-semibold text-[#121A28] dark:text-white">
-                        {readingStats.label}
+                        {language === 'sw' ? readingStats.labelSw : readingStats.label}
                       </span>
                       <span className="text-[#9AA5B8] dark:text-[#7B8B9F]">·</span>
                       <span className="text-[#4A576D] dark:text-[#A2B1C6] text-[11px] tabular-nums">
@@ -677,7 +703,9 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
 
         {/* Full Article Reader Modal with Dynamic Estimated Reading Time, Scroll Tracker & Share Counter */}
         {activeArticle && (() => {
-          const modalStats = calculateArticleReadingTime(activeArticle);
+          const modalStats =
+            readingStatsById[activeArticle.id] ?? calculateArticleReadingTime(activeArticle);
+          const remainingMins = calculateRemainingMinutes(modalStats.minutes, modalScrollPct);
           const modalShares = shareCounts[activeArticle.id] ?? activeArticle.shareCount;
           const modalFeedback =
             shareFeedback?.articleId === activeArticle.id ? shareFeedback.label : null;
@@ -719,14 +747,18 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
                     <div className="flex items-center gap-2 flex-wrap mb-1.5">
                       <div
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-[#172235] border border-[#C5A880]/50 rounded-lg text-xs font-mono text-[#8C6B32] dark:text-[#E4C999] shadow-inner"
-                        title={`Calculated from ${modalStats.wordCount.toLocaleString()} words (${modalStats.readingPaceNote})`}
+                        title={
+                          language === 'sw'
+                            ? `Imehesabiwa kutoka maneno ${modalStats.wordCount.toLocaleString()} (${modalStats.readingPaceNoteSw})`
+                            : `Calculated from ${modalStats.wordCount.toLocaleString()} words (${modalStats.readingPaceNote})`
+                        }
                       >
                         <Clock className="w-3.5 h-3.5 text-[#8C6B32] dark:text-[#C5A880] animate-pulse shrink-0" />
                         <span className="text-[10px] uppercase tracking-wider text-[#6F7A8F] dark:text-[#8C98AE]">
                           {t('insights.readTimePrefix')}:
                         </span>
                         <span className="font-bold text-[#121A28] dark:text-white">
-                          {modalStats.label}
+                          {language === 'sw' ? modalStats.labelSw : modalStats.label}
                         </span>
                         <span className="text-[#9AA5B8] dark:text-[#5B6B82]">·</span>
                         <span className="text-[#4A576D] dark:text-[#BAC5D6] tabular-nums">
@@ -780,9 +812,17 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
                   className="p-6 md:p-8 overflow-y-auto space-y-4 text-sm text-[#324056] dark:text-[#BAC5D6] leading-relaxed relative scroll-smooth"
                 >
                   <div className="p-3 bg-[#F6F1E6] dark:bg-[#131B29] rounded-xl border border-[#E4DCCF] dark:border-[#20293D] text-xs font-mono text-[#8C6B32] dark:text-[#E4C999] flex items-center justify-between flex-wrap gap-2">
-                    <span>Official Chambers Citation: {activeArticle.citation}</span>
-                    <span className="text-[11px] text-[#5C6A80] dark:text-[#8C98AE]">
-                      Scroll to read · {Math.round(modalScrollPct)}% completed
+                    <span>
+                      {language === 'sw' ? 'Nukuru Rasmi ya Ofisi' : 'Official Chambers Citation'}: {activeArticle.citation}
+                    </span>
+                    <span className="text-[11px] text-[#5C6A80] dark:text-[#8C98AE] tabular-nums">
+                      {remainingMins === 0
+                        ? language === 'sw'
+                          ? 'Umekamilisha kusoma (100%)'
+                          : 'Reading complete (100%)'
+                        : language === 'sw'
+                          ? `${Math.round(modalScrollPct)}% · takriban dak ${remainingMins} zimebaki`
+                          : `${Math.round(modalScrollPct)}% read · ~${remainingMins} min left`}
                     </span>
                   </div>
 

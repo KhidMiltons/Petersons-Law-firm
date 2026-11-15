@@ -21,6 +21,12 @@ import {
 } from '../data/firmData';
 import { FAQS_DATA } from './FAQ';
 import { useLanguage } from '../context/LanguageContext';
+import {
+  searchAnalyticsService,
+  getTopLegalTopics,
+  TopicFrequencyEntry,
+  SEARCH_ANALYTICS_UPDATED_EVENT,
+} from '../utils/searchAnalytics';
 
 export type SearchCategory = 'all' | 'practice' | 'case' | 'faq' | 'document';
 
@@ -119,10 +125,14 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<string>('');
   const [voiceError, setVoiceError] = useState<string>('');
+  const [topTopics, setTopTopics] = useState<TopicFrequencyEntry[]>(() =>
+    getTopLegalTopics(7)
+  );
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const lastLoggedSignatureRef = useRef<string>('');
 
   const stopVoiceRecognition = useCallback(() => {
     if (recognitionRef.current) {
@@ -147,17 +157,23 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
       }, 50);
       setSelectedIndex(0);
       setVoiceError('');
+      setTopTopics(getTopLegalTopics(7));
+      lastLoggedSignatureRef.current = '';
     } else {
       stopVoiceRecognition();
       setQuery('');
       setSelectedCategory('all');
       setVoiceStatus('');
       setVoiceError('');
+      lastLoggedSignatureRef.current = '';
     }
   }, [isOpen, stopVoiceRecognition]);
 
   useEffect(() => {
+    const refreshTopics = () => setTopTopics(getTopLegalTopics(7));
+    window.addEventListener(SEARCH_ANALYTICS_UPDATED_EVENT, refreshTopics);
     return () => {
+      window.removeEventListener(SEARCH_ANALYTICS_UPDATED_EVENT, refreshTopics);
       stopVoiceRecognition();
     };
   }, [stopVoiceRecognition]);
@@ -261,8 +277,44 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
     setSelectedIndex(0);
   }, [query, selectedCategory]);
 
+  // Debounced analytics logging for typed search queries (settled query >= 2 chars)
+  useEffect(() => {
+    if (!isOpen) return;
+    const trimmed = query.trim();
+    if (trimmed.length < 2) return;
+
+    const signature = `${selectedCategory}::${trimmed.toLowerCase()}`;
+    if (lastLoggedSignatureRef.current === signature) return;
+
+    const timer = window.setTimeout(() => {
+      lastLoggedSignatureRef.current = signature;
+      void searchAnalyticsService.logSearchQuery({
+        query: trimmed,
+        category: selectedCategory,
+        resultCount: filteredResults.length,
+        source: 'typed',
+        language,
+      });
+    }, 650);
+
+    return () => window.clearTimeout(timer);
+  }, [isOpen, query, selectedCategory, filteredResults.length, language]);
+
   const executeSelection = useCallback(
     (item: SearchResultItem) => {
+      const activeQuery = query.trim() || item.title;
+      lastLoggedSignatureRef.current = `${selectedCategory}::${activeQuery.toLowerCase()}`;
+      void searchAnalyticsService.logSearchQuery({
+        query: activeQuery,
+        category: selectedCategory,
+        resultCount: filteredResults.length,
+        source: 'result-select',
+        language,
+        selectedItemId: item.rawId,
+        selectedItemTitle: item.title,
+        selectedItemType: item.type,
+      });
+
       stopVoiceRecognition();
       onClose();
       if (item.actionType === 'open-practice') {
@@ -283,7 +335,18 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
         }
       }
     },
-    [onClose, onOpenVault, onSelectCase, onSelectFaq, onSelectPractice, stopVoiceRecognition]
+    [
+      filteredResults.length,
+      language,
+      onClose,
+      onOpenVault,
+      onSelectCase,
+      onSelectFaq,
+      onSelectPractice,
+      query,
+      selectedCategory,
+      stopVoiceRecognition,
+    ]
   );
 
   // Interpret spoken voice commands & queries for hands-free navigation
@@ -344,6 +407,17 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
           const remainder = (match[1] || '').trim();
           setSelectedCategory(pat.category);
           setQuery(remainder);
+          const count = filterCatalog(remainder, pat.category).length;
+          if (remainder.length >= 2) {
+            lastLoggedSignatureRef.current = `${pat.category}::${remainder.toLowerCase()}`;
+            void searchAnalyticsService.logSearchQuery({
+              query: remainder,
+              category: pat.category,
+              resultCount: count,
+              source: 'voice',
+              language,
+            });
+          }
           setVoiceStatus(
             remainder
               ? `Voice filter: ${pat.label} matching "${remainder}"`
@@ -375,6 +449,17 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
         setSelectedCategory('all');
         setQuery(targetTopic);
         const matches = filterCatalog(targetTopic, 'all');
+        lastLoggedSignatureRef.current = `all::${targetTopic.toLowerCase()}`;
+        void searchAnalyticsService.logSearchQuery({
+          query: targetTopic,
+          category: 'all',
+          resultCount: matches.length,
+          source: 'voice',
+          language,
+          selectedItemId: matches[0]?.rawId,
+          selectedItemTitle: matches[0]?.title,
+          selectedItemType: matches[0]?.type,
+        });
         if (matches.length > 0) {
           setVoiceStatus(`Voice navigation: Opening "${matches[0].title}"`);
           executeSelection(matches[0]);
@@ -387,6 +472,14 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
       // Standard spoken search query (filters topics, cases, FAQs, documents)
       setQuery(cleaned);
       const resultCount = filterCatalog(cleaned, selectedCategory).length;
+      lastLoggedSignatureRef.current = `${selectedCategory}::${cleaned.toLowerCase()}`;
+      void searchAnalyticsService.logSearchQuery({
+        query: cleaned,
+        category: selectedCategory,
+        resultCount,
+        source: 'voice',
+        language,
+      });
       setVoiceStatus(
         language === 'sw'
           ? `Utafutaji wa sauti: "${cleaned}" (${resultCount})`
@@ -545,15 +638,7 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
     }
   }, [selectedIndex]);
 
-  const quickTopics = [
-    { label: 'Arbitration', query: 'Arbitration' },
-    { label: 'ArdhiSasa', query: 'ArdhiSasa' },
-    { label: 'Beneficial Ownership', query: 'Beneficial Ownership' },
-    { label: 'Supreme Court', query: 'Supreme Court' },
-    { label: 'Section 134 Privilege', query: 'Section 134' },
-    { label: 'ARO Legal Fees', query: 'ARO' },
-    { label: 'Injunctions', query: 'Injunction' },
-  ];
+  const quickTopics = topTopics;
 
   if (!isOpen) return null;
 
@@ -739,7 +824,7 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
           </span>
         </div>
 
-        {/* Quick Topics Tag Bar (when query is empty) */}
+        {/* Popular Legal Topics Tag Bar (ranked dynamically via analytics log when query is empty) */}
         {!query && (
           <div className="px-5 py-2.5 border-b border-[#141E2D] bg-[#070B13] flex items-center gap-2 overflow-x-auto text-xs scrollbar-none">
             <span className="text-[10px] uppercase tracking-wider font-semibold text-[#C5A880] shrink-0">
@@ -747,12 +832,23 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
             </span>
             {quickTopics.map((topic) => (
               <button
-                key={topic.label}
+                key={topic.topic}
                 type="button"
-                onClick={() => setQuery(topic.query)}
+                onClick={() => {
+                  const matches = filterCatalog(topic.query, selectedCategory);
+                  lastLoggedSignatureRef.current = `${selectedCategory}::${topic.query.toLowerCase()}`;
+                  void searchAnalyticsService.logSearchQuery({
+                    query: topic.query,
+                    category: selectedCategory,
+                    resultCount: matches.length,
+                    source: 'quick-topic',
+                    language,
+                  });
+                  setQuery(topic.query);
+                }}
                 className="px-2.5 py-0.5 rounded bg-[#121927] hover:bg-[#1A2438] text-[#A6B2C4] hover:text-[#DFBE82] border border-[#212E44] text-[11px] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
-                {topic.label}
+                {topic.topic}
               </button>
             ))}
           </div>
@@ -897,6 +993,15 @@ export const SearchIndexModal: React.FC<SearchIndexModalProps> = ({
           <button
             type="button"
             onClick={() => {
+              if (query.trim().length >= 2) {
+                void searchAnalyticsService.logSearchQuery({
+                  query: query.trim(),
+                  category: selectedCategory,
+                  resultCount: filteredResults.length,
+                  source: 'consultation-cta',
+                  language,
+                });
+              }
               stopVoiceRecognition();
               onClose();
               onOpenConsultation(query || 'Search Inquiry');

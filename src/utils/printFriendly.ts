@@ -1,5 +1,6 @@
 import { CaseBrief, LegalArticle, LawFirmAward } from '../data/firmData';
 import { RegionalLocation } from '../data/eastAfricaData';
+import { calculateArticleReadingTime } from './readingTime';
 
 export interface PrintDocumentMetadata {
   docRef: string;
@@ -150,13 +151,14 @@ export function formatLegalInsightForPrint(article: LegalArticle): PrintDocument
     month: 'long',
     year: 'numeric'
   });
+  const readingStats = calculateArticleReadingTime(article);
 
   return {
     meta: {
       docRef: `PAA/INSIGHT/${article.id.toUpperCase()}`,
       docType: 'Law Review & Regulatory Insight',
       title: article.title,
-      subtitle: `${article.category} · ${article.date}`,
+      subtitle: `${article.category} · ${article.date} · ${readingStats.label} (${readingStats.wordCount.toLocaleString()} words)`,
       dateGenerated: currentDate,
       category: article.category,
       jurisdiction: 'Republic of Kenya & East African Community (EAC)',

@@ -236,8 +236,13 @@ html.light ::-webkit-scrollbar-thumb:hover {
     color: #111827 !important;
   }
 
-  .no-print {
+  .no-print,
+  .no-print *,
+  #mobile-navigation-drawer,
+  .mobile-menu-trigger,
+  .header-search-button {
     display: none !important;
+    visibility: hidden !important;
   }
 
   @page {

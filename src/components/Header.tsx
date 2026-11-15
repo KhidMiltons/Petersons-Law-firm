@@ -85,6 +85,19 @@ export const Header: React.FC<HeaderProps> = ({
     setTimeout(() => setLangToast(null), 3500);
   };
 
+  const showThemeNotice = (nextTheme: 'light' | 'dark') => {
+    const notice =
+      nextTheme === 'light'
+        ? language === 'sw'
+          ? 'Mandhari ya Luxury Parchment (Mwanga) yamewashwa'
+          : 'Luxury Parchment Light Theme enabled'
+        : language === 'sw'
+          ? 'Mandhari ya Chambers Obsidian (Giza) yamewashwa'
+          : 'Default Dark Theme (Chambers Obsidian) enabled';
+    setLangToast(notice);
+    setTimeout(() => setLangToast(null), 3000);
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-40 w-full max-w-full overflow-x-clip transition-all duration-300">
       {/* Subtle Progress Bar at the Very Top of the Browser Window */}
@@ -117,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Floating Reading Progress Telemetry Badge (Viewport-Containment Safe) */}
       {isLongFormActive && (
-        <div className="fixed right-4 lg:right-6 bottom-5 z-40 pointer-events-none max-w-[calc(100vw-2rem)]">
+        <div className="no-print fixed right-4 lg:right-6 bottom-5 z-40 pointer-events-none max-w-[calc(100vw-2rem)]">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#0A0F1B]/95 border border-[#C5A880]/50 shadow-xl backdrop-blur-md text-[11px] font-mono text-[#E4C999] whitespace-nowrap max-w-full">
             <BookOpen className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
             <span className="text-[#C5A880] font-semibold uppercase tracking-wider truncate">
@@ -153,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Floating Language Switch Toast Feedback */}
       {langToast && (
-        <div className="fixed top-20 right-4 lg:right-6 z-50 p-3 bg-[#0D1420]/95 border border-[#C5A880]/60 rounded-xl shadow-2xl text-xs text-[#E4C999] flex items-center gap-2.5 max-w-[calc(100vw-2rem)] backdrop-blur-md">
+        <div className="no-print fixed top-20 right-4 lg:right-6 z-50 p-3 bg-[#0D1420]/95 border border-[#C5A880]/60 rounded-xl shadow-2xl text-xs text-[#E4C999] flex items-center gap-2.5 max-w-[calc(100vw-2rem)] backdrop-blur-md">
           <Globe className="w-4 h-4 text-[#C5A880] shrink-0" />
           <span className="font-medium truncate">{langToast}</span>
           <button
@@ -241,8 +254,8 @@ export const Header: React.FC<HeaderProps> = ({
                 {/* Language Switcher Segmented Control */}
                 <LanguageSwitcher variant="compact" onLanguageChange={showLanguageNotice} />
 
-                {/* Dark / Light Mode Toggle */}
-                <ThemeToggle variant="compact" />
+                {/* Dark / Luxury Parchment Light Theme Toggle */}
+                <ThemeToggle variant="compact" onThemeChange={showThemeNotice} />
 
                 {/* Secure Client Portal Compact Action (Full label on 2xl+, icon-only below so nav never clips) */}
                 <button
@@ -274,7 +287,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenSearch}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-xs text-[#E4C999] hover:text-white transition-all group cursor-pointer whitespace-nowrap shrink-0"
+                className="no-print header-search-button inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-xs text-[#E4C999] hover:text-white transition-all group cursor-pointer whitespace-nowrap shrink-0"
                 title={`${t('search.triggerLabel')} (⌘K / Ctrl+K)`}
                 aria-label={t('search.triggerLabel')}
               >
@@ -300,7 +313,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
-                className="xl:hidden p-1.5 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-[#A6B2C4] hover:text-white transition-all shrink-0 cursor-pointer"
+                className="no-print mobile-menu-trigger xl:hidden p-1.5 rounded-lg bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] hover:border-[#C5A880]/50 text-[#A6B2C4] hover:text-white transition-all shrink-0 cursor-pointer"
                 aria-label="Toggle Navigation Menu"
                 aria-expanded={mobileMenuOpen}
                 aria-controls="mobile-navigation-drawer"
@@ -314,7 +327,7 @@ export const Header: React.FC<HeaderProps> = ({
           {mobileMenuOpen && (
             <div
               id="mobile-navigation-drawer"
-              className="xl:hidden relative w-full max-w-full mt-3 pt-4 border-t border-[#1C2537] bg-[#0A0E17]/98 backdrop-blur-lg p-4 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 max-h-[calc(100vh-120px)] overflow-y-auto border border-[#222E44]/80 animate-fadeIn"
+              className="no-print xl:hidden relative w-full max-w-full mt-3 pt-4 border-t border-[#1C2537] bg-[#0A0E17]/98 backdrop-blur-lg p-4 sm:p-5 rounded-2xl shadow-2xl space-y-3.5 max-h-[calc(100vh-120px)] overflow-y-auto border border-[#222E44]/80 animate-fadeIn"
             >
               {/* Mobile Search Quick Trigger */}
               <button
@@ -323,7 +336,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileMenuOpen(false);
                   onOpenSearch();
                 }}
-                className="w-full flex items-center justify-between p-2.5 bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] rounded-lg text-xs text-[#A6B2C4] font-medium cursor-pointer"
+                className="no-print header-search-button w-full flex items-center justify-between p-2.5 bg-[#121824] hover:bg-[#1A2334] border border-[#222B3D] rounded-lg text-xs text-[#A6B2C4] font-medium cursor-pointer"
               >
                 <span className="flex items-center gap-2 min-w-0">
                   <Search className="w-4 h-4 text-[#C5A880] shrink-0" />
@@ -341,7 +354,11 @@ export const Header: React.FC<HeaderProps> = ({
                   <Sun className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
                   <span className="whitespace-nowrap">Display Theme:</span>
                 </span>
-                <ThemeToggle variant="segmented" className="w-44 sm:w-48 shrink-0" />
+                <ThemeToggle
+                  variant="segmented"
+                  onThemeChange={showThemeNotice}
+                  className="w-48 sm:w-52 shrink-0"
+                />
               </div>
 
               {/* Vertical Navigation Links inside Drawer */}
@@ -449,7 +466,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {/* Floating Search Icon Button (Pinned inside bottom-right of mobile drawer for one-tap access) */}
-              <div className="sticky bottom-1 flex justify-end pointer-events-none z-20 pt-1">
+              <div className="no-print sticky bottom-1 flex justify-end pointer-events-none z-20 pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -458,7 +475,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   aria-label={`${t('search.triggerLabel')} — ${t('search.title')}`}
                   title={`${t('search.triggerLabel')} (⌘K / Ctrl+K)`}
-                  className="pointer-events-auto w-11 h-11 rounded-full bg-gradient-to-br from-[#C5A880] to-[#DFBE82] text-[#0A0E17] shadow-[0_8px_24px_rgba(197,168,128,0.4)] ring-2 ring-[#0A0E17]/90 hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+                  className="no-print header-search-button pointer-events-auto w-11 h-11 rounded-full bg-gradient-to-br from-[#C5A880] to-[#DFBE82] text-[#0A0E17] shadow-[0_8px_24px_rgba(197,168,128,0.4)] ring-2 ring-[#0A0E17]/90 hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
                 >
                   <Search className="w-5 h-5 stroke-[2.25]" />
                 </button>

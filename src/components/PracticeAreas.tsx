@@ -9,6 +9,8 @@ import {
   ArrowRight,
   CheckCircle2,
   ChevronRight,
+  ScrollText,
+  UserCheck,
   X,
 } from 'lucide-react';
 import { PRACTICE_AREAS, PracticeArea } from '../data/firmData';
@@ -47,22 +49,22 @@ export const PracticeAreas: React.FC<PracticeAreasProps> = ({
     if (onSelectPractice) onSelectPractice(practice);
   };
 
-  const getIcon = (iconName: string) => {
+  const getIcon = (iconName: string, className = 'w-5 h-5 text-[#8C6B32] dark:text-[#C5A880]') => {
     switch (iconName) {
       case 'Landmark':
-        return <Landmark className="w-5 h-5 text-[#8C6B32] dark:text-[#C5A880]" />;
+        return <Landmark className={className} strokeWidth={1.6} />;
       case 'Scale':
-        return <Scale className="w-5 h-5 text-[#8C6B32] dark:text-[#C5A880]" />;
+        return <Scale className={className} strokeWidth={1.6} />;
       case 'Building2':
-        return <Building2 className="w-5 h-5 text-[#8C6B32] dark:text-[#C5A880]" />;
+        return <Building2 className={className} strokeWidth={1.6} />;
       case 'ShieldCheck':
-        return <ShieldCheck className="w-5 h-5 text-[#8C6B32] dark:text-[#C5A880]" />;
+        return <ShieldCheck className={className} strokeWidth={1.6} />;
       case 'Binary':
-        return <Binary className="w-5 h-5 text-[#8C6B32] dark:text-[#C5A880]" />;
+        return <Binary className={className} strokeWidth={1.6} />;
       case 'Flame':
-        return <Flame className="w-5 h-5 text-[#8C6B32] dark:text-[#C5A880]" />;
+        return <Flame className={className} strokeWidth={1.6} />;
       default:
-        return <Scale className="w-5 h-5 text-[#8C6B32] dark:text-[#C5A880]" />;
+        return <Scale className={className} strokeWidth={1.6} />;
     }
   };
 
@@ -105,15 +107,23 @@ export const PracticeAreas: React.FC<PracticeAreasProps> = ({
                 onMouseEnter={() => setHighlightedPracticeId(practice.id)}
                 onMouseLeave={() => setHighlightedPracticeId(null)}
                 onClick={() => handleOpenPractice(practice)}
-                className={`group p-8 rounded-2xl bg-white dark:bg-[#0E1522] border transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer transform hover:-translate-y-1.5 shadow-sm dark:shadow-none ${
+                className={`relative overflow-hidden group p-8 rounded-2xl bg-white dark:bg-[#0E1522] border transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer transform hover:-translate-y-1.5 shadow-sm dark:shadow-none ${
                   isRadarHighlighted
                     ? 'border-[#C5A880] ring-1 ring-[#C5A880]/40 shadow-2xl shadow-[#C5A880]/15 -translate-y-1'
                     : 'border-[#E4DCCF] dark:border-[#1C263A] hover:border-[#C5A880]/60 dark:hover:border-[#C5A880]/50 hover:shadow-2xl hover:shadow-[#C5A880]/10 dark:hover:shadow-[#C5A880]/5'
                 } ${isFeatured ? 'lg:col-span-1 border-t-2 border-t-[#C5A880]/60' : ''}`}
               >
-                <div>
+                {/* Subtle SVG Watermark Iconography */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -bottom-5 -right-5 opacity-[0.045] dark:opacity-[0.055] group-hover:opacity-[0.09] group-hover:scale-105 transition-all duration-500 text-[#8C6B32] dark:text-[#C5A880]"
+                >
+                  {getIcon(practice.iconName, 'w-36 h-36')}
+                </div>
+
+                <div className="relative z-10">
                   <div className="flex items-center justify-between mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-[#F5EFE4] dark:bg-[#141D2D] border border-[#E4DCCF] dark:border-[#232F46] flex items-center justify-center group-hover:border-[#C5A880]/50 group-hover:scale-105 transition-all duration-300">
+                    <div className="w-11 h-11 rounded-xl bg-[#F5EFE4] dark:bg-[#141D2D] border border-[#E4DCCF] dark:border-[#232F46] flex items-center justify-center group-hover:border-[#C5A880]/60 group-hover:scale-105 transition-all duration-300 shadow-xs">
                       {getIcon(practice.iconName)}
                     </div>
                     <span className="font-mono text-xs text-[#6F7A8F] dark:text-[#5D6B82] group-hover:text-[#8C6B32] dark:group-hover:text-[#C5A880] transition-colors">
@@ -134,8 +144,9 @@ export const PracticeAreas: React.FC<PracticeAreasProps> = ({
 
                   {/* Statutory framework tags */}
                   <div className="mt-5 pt-4 border-t border-[#EFE8DA] dark:border-[#1C2436] space-y-2">
-                    <span className="text-[10px] uppercase tracking-wider text-[#6F7A8F] font-semibold block">
-                      {t('practice.governingStatutes')}
+                    <span className="text-[10px] uppercase tracking-wider text-[#6F7A8F] font-semibold flex items-center gap-1.5">
+                      <ScrollText className="w-3 h-3 text-[#8C6B32] dark:text-[#C5A880] shrink-0" />
+                      <span>{t('practice.governingStatutes')}</span>
                     </span>
                     <div className="text-xs text-[#8C6B32] dark:text-[#C5A880] font-mono line-clamp-1">
                       {practice.keyActs.join(' · ')}
@@ -143,14 +154,17 @@ export const PracticeAreas: React.FC<PracticeAreasProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#EFE8DA] dark:border-[#1A2334] flex items-center justify-between text-xs">
-                  <span className="text-[#5C6A80] dark:text-[#8C98AE]">
-                    {t('practice.lead')}:{' '}
-                    <strong className="text-[#121A28] dark:text-white">
-                      {practice.leadAdvocate}
-                    </strong>
+                <div className="relative z-10 mt-6 pt-4 border-t border-[#EFE8DA] dark:border-[#1A2334] flex items-center justify-between text-xs gap-2">
+                  <span className="text-[#5C6A80] dark:text-[#8C98AE] flex items-center gap-1.5 min-w-0">
+                    <UserCheck className="w-3.5 h-3.5 text-[#8C6B32] dark:text-[#C5A880] shrink-0" />
+                    <span className="truncate">
+                      {t('practice.lead')}:{' '}
+                      <strong className="text-[#121A28] dark:text-white">
+                        {practice.leadAdvocate}
+                      </strong>
+                    </span>
                   </span>
-                  <span className="text-[#8C6B32] dark:text-[#C5A880] flex items-center gap-1 group-hover:translate-x-1 transition-transform font-medium">
+                  <span className="text-[#8C6B32] dark:text-[#C5A880] flex items-center gap-1 group-hover:translate-x-1 transition-transform font-medium shrink-0">
                     <span>{t('practice.inspect')}</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </span>
@@ -165,14 +179,25 @@ export const PracticeAreas: React.FC<PracticeAreasProps> = ({
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
             <div className="relative w-full max-w-2xl bg-white dark:bg-[#0D131F] border border-[#DFD4C1] dark:border-[#C5A880]/30 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
 
-              <div className="p-6 bg-[#F6F1E6] dark:bg-[#121927] border-b border-[#E4DCCF] dark:border-[#222E46] flex items-center justify-between">
-                <div>
-                  <span className="text-xs uppercase tracking-widest text-[#8C6B32] dark:text-[#C5A880] font-semibold">
-                    PAA Advocates
-                  </span>
-                  <h3 className="text-2xl font-cinzel text-[#121A28] dark:text-white mt-1">
-                    {selectedPractice.title}
-                  </h3>
+              <div className="relative overflow-hidden p-6 bg-[#F6F1E6] dark:bg-[#121927] border-b border-[#E4DCCF] dark:border-[#222E46] flex items-center justify-between gap-4">
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-4 -top-4 opacity-[0.06] text-[#8C6B32] dark:text-[#C5A880]"
+                >
+                  {getIcon(selectedPractice.iconName, 'w-28 h-28')}
+                </div>
+                <div className="relative z-10 flex items-center gap-3.5 min-w-0">
+                  <div className="w-11 h-11 rounded-xl bg-white dark:bg-[#0D131F] border border-[#DFD4C1] dark:border-[#C5A880]/30 flex items-center justify-center shrink-0 shadow-xs">
+                    {getIcon(selectedPractice.iconName)}
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs uppercase tracking-widest text-[#8C6B32] dark:text-[#C5A880] font-semibold">
+                      PAA Advocates
+                    </span>
+                    <h3 className="text-xl sm:text-2xl font-cinzel text-[#121A28] dark:text-white mt-0.5 leading-snug">
+                      {selectedPractice.title}
+                    </h3>
+                  </div>
                 </div>
                 <button
                   type="button"

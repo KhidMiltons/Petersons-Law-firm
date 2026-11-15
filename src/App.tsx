@@ -21,6 +21,7 @@ import { ConsultationModal } from './components/ConsultationModal';
 import { ClientVaultModal } from './components/ClientVaultModal';
 import { SecureClientPortalModal } from './components/SecureClientPortalModal';
 import { SearchIndexModal } from './components/SearchIndexModal';
+import { BackToTopButton } from './components/BackToTopButton';
 
 export default function App() {
   const [isConsultationOpen, setIsConsultationOpen] = useState(false);
@@ -308,6 +309,9 @@ export default function App() {
         }}
         onOpenVault={() => setIsVaultOpen(true)}
       />
+
+      {/* Floating Back to Top Action Button (appears after scrolling past Hero) */}
+      <BackToTopButton />
     </div>
         </ReadingProgressProvider>
       </LanguageProvider>

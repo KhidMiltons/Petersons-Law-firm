@@ -15,13 +15,22 @@ import { useLanguage } from '../context/LanguageContext';
 
 interface CaseBriefTimelineProps {
   brief: CaseBrief;
+  caseIndex?: number;
+  totalCases?: number;
+  onNavigateCase?: (direction: 'prev' | 'next') => void;
 }
 
-export const CaseBriefTimeline: React.FC<CaseBriefTimelineProps> = ({ brief }) => {
+export const CaseBriefTimeline: React.FC<CaseBriefTimelineProps> = ({
+  brief,
+  caseIndex = 0,
+  totalCases = 1,
+  onNavigateCase,
+}) => {
   const { language } = useLanguage();
   const milestones: CaseTimelineMilestone[] = CASE_TIMELINES[brief.id] || [];
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [scrollPct, setScrollPct] = useState<number>(0);
+  const timelineWrapperRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -33,6 +42,44 @@ export const CaseBriefTimeline: React.FC<CaseBriefTimelineProps> = ({ brief }) =
       scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [brief.id]);
+
+  // Global scoped arrow-key listener when CaseBriefTimeline is in view and no modal/input is focused
+  useEffect(() => {
+    if (!onNavigateCase || totalCases <= 1) return;
+
+    const handleWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.tagName === 'SELECT' ||
+          activeEl.isContentEditable)
+      ) {
+        return;
+      }
+
+      // Skip if an open dialog/modal is currently overlaid
+      if (document.querySelector('[role="dialog"]')) return;
+
+      // Skip if the event was already handled directly by the timeline container
+      if (timelineWrapperRef.current?.contains(activeEl)) return;
+
+      const rect = timelineWrapperRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const isInView = rect.top < window.innerHeight * 0.85 && rect.bottom > window.innerHeight * 0.15;
+      if (!isInView) return;
+
+      e.preventDefault();
+      onNavigateCase(e.key === 'ArrowLeft' ? 'prev' : 'next');
+    };
+
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, [onNavigateCase, totalCases]);
 
   if (milestones.length === 0) return null;
 
@@ -50,6 +97,28 @@ export const CaseBriefTimeline: React.FC<CaseBriefTimelineProps> = ({ brief }) =
     const targetEl = itemRefs.current[clamped];
     if (targetEl) {
       targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  const handleTimelineKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowLeft' && onNavigateCase && totalCases > 1) {
+      e.preventDefault();
+      onNavigateCase('prev');
+    } else if (e.key === 'ArrowRight' && onNavigateCase && totalCases > 1) {
+      e.preventDefault();
+      onNavigateCase('next');
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      scrollToMilestone(activeIndex - 1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      scrollToMilestone(activeIndex + 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      scrollToMilestone(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      scrollToMilestone(milestones.length - 1);
     }
   };
 
@@ -86,13 +155,16 @@ export const CaseBriefTimeline: React.FC<CaseBriefTimelineProps> = ({ brief }) =
 
   return (
     <div
-      className="mb-10 rounded-2xl bg-white dark:bg-[#0D1422] border border-[#E4DCCF] dark:border-[#1E2A40] shadow-sm overflow-hidden"
-      aria-label="Historical Case Development Timeline"
+      ref={timelineWrapperRef}
+      tabIndex={0}
+      onKeyDown={handleTimelineKeyDown}
+      className="mb-10 rounded-2xl bg-white dark:bg-[#0D1422] border border-[#E4DCCF] dark:border-[#1E2A40] shadow-sm overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A880]"
+      aria-label="Historical Case Development Timeline — Use Left and Right arrow keys to switch landmark cases"
     >
       {/* Timeline Header Bar */}
       <div className="p-5 sm:px-6 bg-[#F6F1E6] dark:bg-[#111928] border-b border-[#E4DCCF] dark:border-[#1E2A40] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-[#8C6B32] dark:text-[#C5A880] font-semibold">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-[#8C6B32] dark:text-[#C5A880] font-semibold flex-wrap">
             <History className="w-3.5 h-3.5 shrink-0" />
             <span>
               {language === 'sw'
@@ -117,11 +189,45 @@ export const CaseBriefTimeline: React.FC<CaseBriefTimelineProps> = ({ brief }) =
               {language === 'sw' ? 'Hatua Iliyochaguliwa' : 'Stage'}: {activeIndex + 1}/
               {milestones.length}
             </span>
+            {onNavigateCase && totalCases > 1 && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="text-[#8C6B32] dark:text-[#C5A880]">
+                  {language === 'sw' ? 'Tumia mishale ← → kubadili kesi' : '← / → Cases · ↑ / ↓ Stages'}
+                </span>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Step Controls & Quick Milestone Navigation */}
+        {/* Landmark Case & Milestone Step Controls */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {onNavigateCase && totalCases > 1 && (
+            <div className="inline-flex items-center gap-1 p-0.5 rounded-lg bg-white/80 dark:bg-[#0B111C] border border-[#E4DCCF] dark:border-[#24324A] mr-1">
+              <button
+                type="button"
+                onClick={() => onNavigateCase('prev')}
+                aria-label="Previous landmark case (ArrowLeft)"
+                title="Previous landmark case (←)"
+                className="p-1.5 rounded-md text-[#4A576D] dark:text-[#CBD5E1] hover:bg-[#F5EFE4] dark:hover:bg-[#172132] hover:text-[#121A28] dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <span className="px-2 font-mono text-[11px] font-semibold text-[#8C6B32] dark:text-[#E4C999] tabular-nums whitespace-nowrap">
+                {language === 'sw' ? 'Kesi' : 'Case'} {caseIndex + 1}/{totalCases}
+              </span>
+              <button
+                type="button"
+                onClick={() => onNavigateCase('next')}
+                aria-label="Next landmark case (ArrowRight)"
+                title="Next landmark case (→)"
+                className="p-1.5 rounded-md text-[#4A576D] dark:text-[#CBD5E1] hover:bg-[#F5EFE4] dark:hover:bg-[#172132] hover:text-[#121A28] dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => scrollToMilestone(activeIndex - 1)}
