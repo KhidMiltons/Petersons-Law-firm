@@ -114,6 +114,24 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
+  // Keep canonical and OpenGraph URL tags aligned with current origin & path
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const canonicalUrl = `${window.location.origin}${window.location.pathname}`;
+    const canonicalEl = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (canonicalEl) canonicalEl.href = canonicalUrl;
+    const ogUrlEl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]');
+    if (ogUrlEl) ogUrlEl.content = canonicalUrl;
+    const ogImageEl = document.querySelector<HTMLMetaElement>('meta[property="og:image"]');
+    if (ogImageEl && ogImageEl.getAttribute('content')?.startsWith('/')) {
+      ogImageEl.content = `${window.location.origin}/og-chambers.jpg`;
+    }
+    const twitterImageEl = document.querySelector<HTMLMetaElement>('meta[name="twitter:image"]');
+    if (twitterImageEl && twitterImageEl.getAttribute('content')?.startsWith('/')) {
+      twitterImageEl.content = `${window.location.origin}/og-chambers.jpg`;
+    }
+  }, []);
+
   const handleOpenConsultation = (practice?: string, estimate?: string, advocate?: string) => {
     setConsultationParams({ practice, estimate, advocate });
     setIsConsultationOpen(true);
