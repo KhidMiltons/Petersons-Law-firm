@@ -18,10 +18,10 @@ import { useLanguage } from '../context/LanguageContext';
 import { useReadingProgress } from '../context/ReadingProgressContext';
 import { calculateCaseBriefReadingTime } from '../utils/readingTime';
 import { PrintFriendlyModal } from './PrintFriendlyModal';
+import { PrintDocument } from './PrintDocument';
 import {
-  formatCaseBriefForPrint,
   formatAllCaseBriefsForPrint,
-  PrintDocument,
+  PrintDocument as PrintDocumentData,
 } from '../utils/printFriendly';
 import {
   downloadCaseBriefPdf,
@@ -77,7 +77,8 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
   const [downloadedPdfId, setDownloadedPdfId] = useState<string | null>(null);
   const [downloadedPdfInfo, setDownloadedPdfInfo] =
     useState<GeneratedCaseBriefPdfResult | null>(null);
-  const [printDoc, setPrintDoc] = useState<PrintDocument | null>(null);
+  const [printDoc, setPrintDoc] = useState<PrintDocumentData | null>(null);
+  const [a4PreviewBrief, setA4PreviewBrief] = useState<CaseBrief | null>(null);
   const [annotatingBrief, setAnnotatingBrief] = useState<CaseBrief | null>(null);
 
   // Real-time annotations index synced across CaseBriefs cards & annotation modal
@@ -214,18 +215,17 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
     window.setTimeout(() => setCopiedTakeaways(false), 2200);
   };
 
-  // Directly triggers browser print dialog targeting #printable-document via index.css @media print
-  const handlePrintSummary = (brief: CaseBrief) => {
+  // Opens stylized A4 PrintDocument preview modal for current case brief
+  const handleOpenPrintPreview = (brief: CaseBrief) => {
     setSelectedBrief(brief);
-    const doc = formatCaseBriefForPrint(brief);
-    setPrintDoc(doc);
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    if (onSelectCaseBrief) onSelectCaseBrief(brief);
+    setPrintDoc(null);
+    setA4PreviewBrief(brief);
   };
 
   // Directly triggers browser print dialog for full judicial precedents compendium
   const handlePrintSummaryCompendium = () => {
+    setA4PreviewBrief(null);
     const doc = formatAllCaseBriefsForPrint(CASE_BRIEFS);
     setPrintDoc(doc);
     setTimeout(() => {
@@ -502,11 +502,12 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
 
               <button
                 type="button"
-                onClick={() => handlePrintSummary(selectedBrief)}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-[#F5EFE4] dark:bg-[#141D2C] hover:bg-[#EAE1CE] dark:hover:bg-[#1C283C] text-[#8C6B32] dark:text-[#E4C999] text-xs font-semibold rounded-xl border border-[#DFD4C1] dark:border-[#24324A] transition-all cursor-pointer whitespace-nowrap"
+                onClick={() => handleOpenPrintPreview(selectedBrief)}
+                title="Open stylized A4 print preview for selected case"
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-[#F5EFE4] dark:bg-[#141D2C] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#8C6B32] dark:text-[#E4C999] text-xs font-semibold rounded-xl border border-[#C5A880]/45 dark:border-[#C5A880]/35 hover:border-[#C5A880] transition-all group cursor-pointer whitespace-nowrap"
               >
-                <Printer className="w-3.5 h-3.5 text-[#8C6B32] dark:text-[#C5A880]" />
-                <span>Stationery Preview</span>
+                <Printer className="w-3.5 h-3.5 text-[#8C6B32] dark:text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
+                <span>{language === 'sw' ? 'Chapa Kesi (A4)' : 'Print Case Brief (A4)'}</span>
               </button>
             </div>
           </div>
@@ -700,6 +701,19 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          handleOpenPrintPreview(brief);
+                        }}
+                        title="Open A4 print preview for this case brief"
+                        aria-label={`Print A4 preview for ${brief.matterName}`}
+                        className="p-1.5 rounded-lg text-[#5C6A80] dark:text-[#8C98AE] hover:text-[#8C6B32] dark:hover:text-[#DFBE82] hover:bg-[#F5EFE4] dark:hover:bg-[#161F2E] border border-transparent hover:border-[#C5A880]/30 transition-all flex items-center gap-1 text-[11px] font-sans cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-[#8C6B32] dark:text-[#C5A880]" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           handleDownloadPdf(brief);
                         }}
                         title="Download formatted Chambers stationery PDF"
@@ -812,13 +826,26 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        handleOpenPrintPreview(brief);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#131B2A] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#8C6B32] dark:text-[#E4C999] text-xs font-semibold border border-[#C5A880]/40 dark:border-[#C5A880]/30 hover:border-[#C5A880] transition-all shadow-sm group cursor-pointer whitespace-nowrap"
+                      title="Open stylized A4 print preview for this landmark case"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-[#8C6B32] dark:text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
+                      <span>{language === 'sw' ? 'Chapa (A4)' : 'Print'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         handleDownloadPdf(brief);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F5EFE4] dark:bg-[#141D2C] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#8C6B32] dark:text-[#E4C999] text-xs font-semibold border border-[#C5A880]/40 dark:border-[#C5A880]/30 hover:border-[#C5A880] transition-all shadow-sm group cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F5EFE4] dark:bg-[#141D2C] hover:bg-[#C5A880] hover:text-[#0A0E17] text-[#8C6B32] dark:text-[#E4C999] text-xs font-semibold border border-[#C5A880]/40 dark:border-[#C5A880]/30 hover:border-[#C5A880] transition-all shadow-sm group cursor-pointer whitespace-nowrap"
                       title="Download formatted stationery PDF for this landmark case"
                     >
                       <Download className="w-3.5 h-3.5 text-[#8C6B32] dark:text-[#C5A880] group-hover:text-[#0A0E17] transition-colors" />
-                      <span>Download as PDF</span>
+                      <span>PDF</span>
                     </button>
 
                     <button
@@ -828,7 +855,7 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
                         setSelectedBrief(brief);
                         setAnnotatingBrief(brief);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#131B2A] hover:bg-[#EFE8DA] dark:hover:bg-[#1C283C] text-[#4A576D] dark:text-[#A6B4CD] hover:text-[#121A28] dark:hover:text-white border border-[#E4DCCF] dark:border-[#202E44] text-xs font-medium transition-all shadow-sm cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#131B2A] hover:bg-[#EFE8DA] dark:hover:bg-[#1C283C] text-[#4A576D] dark:text-[#A6B4CD] hover:text-[#121A28] dark:hover:text-white border border-[#E4DCCF] dark:border-[#202E44] text-xs font-medium transition-all shadow-sm cursor-pointer whitespace-nowrap"
                       title="Study Precedent, Highlight Clauses & Add Sticky Notes"
                     >
                       <StickyNote className="w-3.5 h-3.5 text-[#8C6B32] dark:text-[#C5A880]" />
@@ -843,7 +870,15 @@ export const CaseBriefs: React.FC<CaseBriefsProps> = ({
 
       </div>
 
-      {/* Printer-Ready PDF Layout Modal */}
+      {/* Stylized A4 Case Brief Print Preview Component */}
+      <PrintDocument
+        isOpen={!!a4PreviewBrief}
+        onClose={() => setA4PreviewBrief(null)}
+        caseBrief={a4PreviewBrief}
+        annotations={a4PreviewBrief ? annotationsByBrief[a4PreviewBrief.id] || [] : []}
+      />
+
+      {/* Printer-Ready Compendium Layout Modal */}
       <PrintFriendlyModal
         isOpen={!!printDoc}
         onClose={() => setPrintDoc(null)}

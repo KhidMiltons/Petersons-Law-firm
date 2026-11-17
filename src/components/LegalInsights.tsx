@@ -11,6 +11,8 @@ import {
   ExternalLink,
   Search,
   BookOpen,
+  History,
+  Trash2,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useReadingProgress } from '../context/ReadingProgressContext';
@@ -41,6 +43,64 @@ interface LegalInsightsProps {
   onSelectArticle?: (article: LegalArticle | null) => void;
 }
 
+interface RecentReadEntry {
+  articleId: string;
+  openedAt: string;
+  readCount: number;
+}
+
+const RECENT_READS_STORAGE_KEY = 'paa_recent_reads_v1';
+const MAX_RECENT_READS = 6;
+
+function loadRecentReadsFromStorage(): RecentReadEntry[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_READS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is RecentReadEntry =>
+        typeof item === 'object' &&
+        item !== null &&
+        typeof item.articleId === 'string' &&
+        typeof item.openedAt === 'string'
+    );
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentReadsToStorage(entries: RecentReadEntry[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(RECENT_READS_STORAGE_KEY, JSON.stringify(entries));
+  } catch {
+    // Ignore storage quota or security errors
+  }
+}
+
+function formatRecentReadTimestamp(iso: string, language: 'en' | 'sw'): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const diffMs = Date.now() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) {
+    return language === 'sw' ? 'Sasa hivi' : 'Just now';
+  }
+  if (diffMins < 60) {
+    return language === 'sw' ? `Dakika ${diffMins} zilizopita` : `${diffMins}m ago`;
+  }
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) {
+    return language === 'sw' ? `Saa ${diffHours} zilizopita` : `${diffHours}h ago`;
+  }
+  return date.toLocaleDateString(language === 'sw' ? 'sw-KE' : 'en-GB', {
+    day: '2-digit',
+    month: 'short',
+  });
+}
+
 export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle }) => {
   const { language, t } = useLanguage();
   const { setLongFormProgress, clearLongFormProgress } = useReadingProgress();
@@ -60,6 +120,9 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
   const [glossaryEnabled, setGlossaryEnabled] = useState<boolean>(true);
   const [isGlossaryOpen, setIsGlossaryOpen] = useState<boolean>(false);
   const [focusedGlossaryTermId, setFocusedGlossaryTermId] = useState<string | null>(null);
+  const [recentReads, setRecentReads] = useState<RecentReadEntry[]>(() =>
+    loadRecentReadsFromStorage()
+  );
   const sectionRef = useRef<HTMLElement>(null);
   const feedbackTimerRef = useRef<number | null>(null);
 
@@ -111,6 +174,23 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
     [filteredArticles, readingStatsById]
   );
 
+  const recentReadArticles = useMemo(() => {
+    return recentReads
+      .map((entry) => {
+        const article = LEGAL_ARTICLES.find((a) => a.id === entry.articleId);
+        if (!article) return null;
+        return { entry, article };
+      })
+      .filter(
+        (item): item is { entry: RecentReadEntry; article: LegalArticle } => item !== null
+      );
+  }, [recentReads]);
+
+  const recentReadIds = useMemo(
+    () => new Set(recentReads.map((r) => r.articleId)),
+    [recentReads]
+  );
+
   // Keep share counters synced across components & browser tabs
   useEffect(() => {
     const handleArticleShared = (e: Event) => {
@@ -125,6 +205,7 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
 
     const handleStorageSync = () => {
       setShareCounts(getInitialShareCounts());
+      setRecentReads(loadRecentReadsFromStorage());
     };
 
     window.addEventListener(ARTICLE_SHARED_EVENT, handleArticleShared);
@@ -208,7 +289,36 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
     const stats = calculateArticleReadingTime(article);
     setLongFormProgress(0, 'insight', article.title, stats);
     setModalScrollPct(0);
+
+    setRecentReads((prev) => {
+      const existing = prev.find((item) => item.articleId === article.id);
+      const nextEntry: RecentReadEntry = {
+        articleId: article.id,
+        openedAt: new Date().toISOString(),
+        readCount: (existing?.readCount ?? 0) + 1,
+      };
+      const updated = [
+        nextEntry,
+        ...prev.filter((item) => item.articleId !== article.id),
+      ].slice(0, MAX_RECENT_READS);
+      saveRecentReadsToStorage(updated);
+      return updated;
+    });
+
     if (onSelectArticle) onSelectArticle(article);
+  };
+
+  const handleRemoveRecentRead = (articleId: string) => {
+    setRecentReads((prev) => {
+      const updated = prev.filter((item) => item.articleId !== articleId);
+      saveRecentReadsToStorage(updated);
+      return updated;
+    });
+  };
+
+  const handleClearRecentReads = () => {
+    setRecentReads([]);
+    saveRecentReadsToStorage([]);
   };
 
   const handleCloseArticle = () => {
@@ -458,6 +568,7 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
             const isShareMenuOpen = openShareMenuId === article.id;
             const activeFeedback =
               shareFeedback?.articleId === article.id ? shareFeedback.label : null;
+            const wasRecentlyRead = recentReadIds.has(article.id);
 
             return (
               <article
@@ -475,6 +586,17 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
                         ·
                       </span>
                       <span>{article.date}</span>
+                      {wasRecentlyRead && (
+                        <>
+                          <span aria-hidden="true" className="text-[#C8BFA8] dark:text-[#3D4C63]">
+                            ·
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-emerald-700 dark:text-emerald-400 font-semibold">
+                            <History className="w-3 h-3" />
+                            <span>{language === 'sw' ? 'Imesomwa' : 'Read'}</span>
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     <button
@@ -674,8 +796,120 @@ export const LegalInsights: React.FC<LegalInsightsProps> = ({ onSelectArticle })
         </div>
         )}
 
+        {/* Recent Reads Section (Persisted in localStorage) */}
+        <section
+          aria-labelledby="recent-reads-heading"
+          className="mt-10 p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#0D1422] border border-[#E4DCCF] dark:border-[#1E2A40] shadow-sm dark:shadow-none"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#C5A880]/15 border border-[#C5A880]/40 flex items-center justify-center text-[#8C6B32] dark:text-[#C5A880] shrink-0">
+                <History className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3
+                    id="recent-reads-heading"
+                    className="text-sm sm:text-base font-cinzel font-bold text-[#121A28] dark:text-white tracking-wide"
+                  >
+                    {language === 'sw' ? 'Zilizosomwa Hivi Karibuni' : 'Recent Reads'}
+                  </h3>
+                  <span className="text-[11px] font-mono text-[#8C6B32] dark:text-[#C5A880] tabular-nums">
+                    ({recentReadArticles.length})
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#5C6A80] dark:text-[#8C98AE]">
+                  {language === 'sw'
+                    ? 'Makala za kisheria ulizofungua hivi karibuni zinahifadhiwa kwenye kivinjari chako.'
+                    : 'Opened legal commentaries tracked automatically in your browser for quick reference.'}
+                </p>
+              </div>
+            </div>
+
+            {recentReadArticles.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearRecentReads}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5EFE4] dark:bg-[#141D2C] hover:bg-rose-500/10 text-[#5C6A80] dark:text-[#94A3B8] hover:text-rose-600 dark:hover:text-rose-400 border border-[#E4DCCF] dark:border-[#24324A] hover:border-rose-500/30 text-[11px] font-medium transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{language === 'sw' ? 'Futa Historia' : 'Clear History'}</span>
+              </button>
+            )}
+          </div>
+
+          {recentReadArticles.length === 0 ? (
+            <div className="p-4 rounded-xl bg-[#FAF8F5] dark:bg-[#090E17] border border-dashed border-[#DFD4C1] dark:border-[#1E2A40] text-xs text-[#5C6A80] dark:text-[#8C98AE] flex items-center gap-2.5">
+              <BookOpen className="w-4 h-4 text-[#8C6B32] dark:text-[#C5A880] shrink-0" />
+              <span>
+                {language === 'sw'
+                  ? 'Hakuna makala zilizofunguliwa bado. Bonyeza "Soma Makala Yote" kwenye makala yoyote hapo juu ili kuzihifadhi hapa.'
+                  : 'No articles opened yet. Select "Read Full Commentary" on any insight above to save it to your Recent Reads list.'}
+              </span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {recentReadArticles.map(({ entry, article }) => {
+                const stats =
+                  readingStatsById[article.id] ?? calculateArticleReadingTime(article);
+                return (
+                  <div
+                    key={article.id}
+                    className="group p-4 rounded-xl bg-[#FAF8F5] dark:bg-[#0B111C] border border-[#E4DCCF] dark:border-[#1D293F] hover:border-[#C5A880]/60 transition-all flex flex-col justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-[#5C6A80] dark:text-[#8C98AE] mb-1.5">
+                        <span className="text-[#8C6B32] dark:text-[#C5A880] font-semibold truncate">
+                          {article.category}
+                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span>{formatRecentReadTimestamp(entry.openedAt, language)}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRecentRead(article.id)}
+                            aria-label={`Remove ${article.title} from Recent Reads`}
+                            title={language === 'sw' ? 'Ondoa kwenye orodha' : 'Remove from Recent Reads'}
+                            className="p-0.5 rounded text-[#7A869B] hover:text-rose-500 transition-colors cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenArticle(article)}
+                        className="text-left w-full cursor-pointer"
+                      >
+                        <h4 className="text-xs sm:text-sm font-cinzel font-semibold text-[#121A28] dark:text-white group-hover:text-[#8C6B32] dark:group-hover:text-[#DFBE82] transition-colors line-clamp-2 leading-snug">
+                          {article.title}
+                        </h4>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#EAE2D2] dark:border-[#182234] text-[10px] font-mono text-[#5C6A80] dark:text-[#8C98AE]">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-[#8C6B32] dark:text-[#C5A880]" />
+                        <span>{language === 'sw' ? stats.labelSw : stats.label}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenArticle(article)}
+                        className="inline-flex items-center gap-1 text-[#8C6B32] dark:text-[#C5A880] hover:underline font-semibold uppercase tracking-wider cursor-pointer"
+                      >
+                        <span>{language === 'sw' ? 'Fungua Tena' : 'Reopen'}</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
         {/* Section Print-Ready Export Dock */}
-        <div className="mt-12 p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#0D1422] border border-[#DFD4C1] dark:border-[#C5A880]/30 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mt-10 p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#0D1422] border border-[#DFD4C1] dark:border-[#C5A880]/30 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#C5A880]/15 border border-[#C5A880]/30 flex items-center justify-center text-[#8C6B32] dark:text-[#C5A880] shrink-0">
               <Printer className="w-5 h-5" />
